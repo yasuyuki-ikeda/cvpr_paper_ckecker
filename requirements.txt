@@ -1,0 +1,3 @@
+# Requires Python 3.9 or newer (for zoneinfo).
+# openpyxl writes the .xlsx copy of the CSV.
+openpyxl>=3.1
