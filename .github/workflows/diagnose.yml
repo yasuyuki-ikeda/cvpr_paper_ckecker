@@ -1,0 +1,71 @@
+name: Diagnose arXiv access
+
+# Manual only. Checks which arXiv endpoints and request headers work from a
+# GitHub-hosted runner. Requests are spaced 3 seconds apart (arXiv's terms).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe with curl
+        run: |
+          SCRIPT_UA="arXiv-csCV-survey/1.0 (research CSV generator)"
+          BROWSER_UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+          DAY=$(TZ=Asia/Tokyo date -d yesterday +%F)
+          OAI="https://oaipmh.arxiv.org/oai"
+          probe() {  # label, url, curl header args...
+            local label="$1" url="$2"; shift 2
+            echo "::group::$label"
+            echo "URL: $url"
+            curl -sS -o body.txt -D headers.txt -w "HTTP %{http_code}  %{time_total}s  %{size_download}B\n" "$@" "$url" || true
+            sed 's/\r$//' headers.txt | grep -iE '^(HTTP|server|via|content-type|retry-after|x-served-by|cf-|x-cache)' || true
+            echo "--- body (first 400 bytes) ---"
+            head -c 400 body.txt; echo
+            echo "::endgroup::"
+            sleep 3
+          }
+          probe "OAI Identify / script UA"            "$OAI?verb=Identify" -A "$SCRIPT_UA"
+          probe "OAI ListRecords / script UA"         "$OAI?verb=ListRecords&metadataPrefix=arXivRaw&set=cs&from=$DAY&until=$DAY" -A "$SCRIPT_UA"
+          probe "OAI ListRecords / script UA + Accept" "$OAI?verb=ListRecords&metadataPrefix=arXivRaw&set=cs&from=$DAY&until=$DAY" -A "$SCRIPT_UA" -H "Accept: application/xml, text/xml, */*"
+          probe "OAI ListRecords / browser UA"        "$OAI?verb=ListRecords&metadataPrefix=arXivRaw&set=cs&from=$DAY&until=$DAY" -A "$BROWSER_UA" -H "Accept: text/html,application/xml;q=0.9,*/*;q=0.8"
+          probe "OAI ListRecords / curl default UA"   "$OAI?verb=ListRecords&metadataPrefix=arXivRaw&set=cs&from=$DAY&until=$DAY"
+          probe "arXiv HTML page / script UA"         "https://arxiv.org/html/2610.22371" -A "$SCRIPT_UA"
+          probe "arXiv abs page / script UA"          "https://arxiv.org/abs/2610.22371" -A "$SCRIPT_UA"
+          probe "arXiv API / script UA"               "https://export.arxiv.org/api/query?search_query=cat:cs.CV&max_results=1" -A "$SCRIPT_UA"
+          probe "Translate API"                       "https://translate.projectsegfau.lt/api/translate?engine=all&from=en&to=ja&text=Hello" -A "$SCRIPT_UA"
+
+      - name: Probe with the script's own fetch()
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          python - <<'EOF'
+          import time
+          from datetime import datetime, timedelta
+          import collect_arxiv_cv as c
+
+          day = (datetime.now(c.JST).date() - timedelta(days=1)).isoformat()
+          params = {"verb": "ListRecords", "metadataPrefix": "arXivRaw",
+                    "set": "cs", "from": day, "until": day}
+          try:
+              data = c.fetch(c.OAI_URL, params, retries=0)
+              print("fetch(): OK", len(data), "bytes")
+          except Exception as error:
+              print("fetch(): FAILED", repr(error))
+              headers = getattr(error, "headers", None)
+              if headers:
+                  print(headers)
+              body = getattr(error, "read", lambda: b"")()
+              print(body[:400])
+          EOF
