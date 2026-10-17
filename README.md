@@ -77,8 +77,10 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
 
 ### 定期実行（GitHub Actions）
 
-`.github/workflows/collect.yml` により、毎週土曜 10:00（日本時間）ごろに直近 7 日分を収集し、`result/<実行日>/` に CSV・xlsx・HTML を追加してこのリポジトリへコミットする。
+`.github/workflows/collect.yml` により、毎週土曜 10:00（日本時間）ごろに、実行日の 2 日前までの 7 日分（前週金曜〜木曜）を収集し、`result/<実行日>/` に CSV・xlsx・HTML を追加してこのリポジトリへコミットする。
 
+- 期間を 2 日前で切るのは、金曜以降の投稿が arXiv に掲載されるのが翌週月曜になるため。期間内の論文は実行時点ですべて掲載済みで、金・土曜の投稿は翌週の期間で拾われる。
+- 収集が 0 件だったときはコミットしない。
 - GitHub の混雑状況により、開始が数分〜数十分遅れることがある。
-- 手動実行: リポジトリの **Actions** タブ → **Collect arXiv cs.CV papers** → **Run workflow**（日数を指定可能）。
+- 手動実行: リポジトリの **Actions** タブ → **Collect arXiv cs.CV papers** → **Run workflow**（日数を指定可能。期間の終わりは常に実行日の 2 日前）。
 - 公開リポジトリで 60 日間コミットが無いと、定期実行は GitHub により自動で停止される（結果のコミットがあれば継続）。
