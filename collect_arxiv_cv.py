@@ -83,10 +83,10 @@ HEADERS = [
     "物体検出・追跡", "画素単位セグメンテーション", "画像・動画編集", "画像・動画生成",
     "画像・動画から3D・深度", "3D物体検出・セグメンテーション", "3D生成・編集",
     "画像・動画・3Dからテキスト", "高速化・軽量化・学習効率化", "非RGBセンサー使用",
-    "ロボット動作", "自動運転", "医療画像", "産業画像",
+    "ロボット動作", "自動運転", "医療画像", "産業画像", "人物",
     "arXiv ID", "URL", "alphaXiv URL",
 ]
-VIEWPOINT_COUNT = 14  # the ● columns, right after the code-status column
+VIEWPOINT_COUNT = 15  # the ● columns, right after the code-status column
 HTML_COLUMNS = 5 + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
 
 
@@ -310,6 +310,10 @@ def classify(paper):
         mark(bool(re.search(r"\b(medical|clinical|clinic\w*|radiolog\w*|patholog\w*|histopatholog\w*|whole.slide|computed tomography|ct scans?|mri|x-ray|chest|ultrasound|endoscop\w*|colonoscop\w*|fundus|retina\w*|dermatolog\w*|skin lesion\w*|lesions?|tumou?rs?|cancer|patients?|surgical|surgery|mammograph\w*)\b", text))),
         # Industrial imaging: inspection, defects, manufacturing.
         mark(bool(re.search(r"\b(industrial|manufactur\w*|factory|factories|defect detection|defect inspection|defect segmentation|defective|surface defects?|(?:visual|optical|automated|product) inspection|mvtec\w*|pcb|printed circuit|production line|assembly line|weld\w*|steel)\b", text))),
+        # People in images, video or 3D: bodies, faces, hands, motion, avatars.
+        # Bare "human", "person", "people" and "face" are avoided: they mostly mean
+        # human evaluation, "people often ...", or "faces challenges".
+        mark(bool(re.search(r"\b(person (?:re-?identification|re-?id|detection|tracking|search|images?|videos?|poses?|segmentation)|(?:multi|single)-person|pedestrians?|human faces?|(?:talking|partial|full)[- ]faces?|faces? (?:recognition|detection|images?|videos?|generation|editing|forgery|anti-spoofing|reenactment|animation|attributes?|landmarks?|parsing|verification|identit(?:y|ies)|reconstruction|forensics|morphing|super-resolution|restoration|swap\w*)|crowd (?:counting|scenes?|analysis|localization)|humans? (?:body|bodies|poses?|motions?|mesh(?:es)?|avatars?|faces?|hands?|actions?|activit(?:y|ies)|videos?|images?|reconstruction|rendering|generation|digitization|subjects?|parsing|detection|tracking|keypoints?|interactions?)|human-object|human-scene|full-body|whole-body|body (?:pose|shape|mesh|motion)|hand[- ]object|hand (?:pose|mesh|reconstruction|tracking|gestures?)|facial|talking[- ]heads?|portraits?|avatars?|smpl\w*|gait|gestures?|sign language|re-identification|reid|motion capture|mocap|dance|dancing|garments?|clothing|clothed|virtual try-on|try-on|deepfakes?|face swap\w*|lip[- ]sync\w*)\b", text))),
     ]
 
 
