@@ -23,6 +23,7 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
 | `--output` | `result/<実行日>/arxiv_csCV_<start>_to_<end>.csv` | CSV の出力先。xlsx と HTML は同じ場所・同じ名前で出力 |
 | `--no-translate` | なし | 翻訳サービスにタイトルを送らない（和訳列は空欄） |
 | `--html-interval` | 3.0 | arXiv HTML ページの取得間隔（秒） |
+| `--index-only` | なし | 収集せず、`result/index.html` だけを作り直す |
 
 必要環境: Python 3.9 以上、`openpyxl`（`requirements.txt`。bat は未導入なら自動で入れる）。
 
@@ -36,7 +37,7 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
    - 公開予定: 「code will be released」など
    - なし: 上記以外
 5. **観点の判定**: タイトルとアブストラクトのキーワード（正規表現）で 14 観点を判定し、該当すれば「●」。
-6. **出力**: `result/<実行日>/`（例: `result/2026-10-17/`）に CSV・xlsx・HTML を書き出す。フォルダは自動で作る。
+6. **出力**: `result/<実行日>/`（例: `result/2026-10-17/`）に CSV・xlsx・HTML を書き出す。フォルダは自動で作る。あわせて `result/index.html`（全結果へのリンク一覧。実行日の新しい順、期間と件数つき）を作り直す。
 
 通信は失敗時（429・5xx・ネットワーク）に最大 4 回やり直す。arXiv の利用条件（3 秒に 1 回・接続 1 本）に合わせている。
 
@@ -78,6 +79,12 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
 - タイトルが外部の翻訳サービスに送られる（`--no-translate` で止められる）。
 - タイトルの数式は LaTeX 表記のまま（例: `$\Delta$`）。
 - 3 日分（約 350 本）で約 20 分かかる。大半は HTML の取得待ち。
+
+### ブラウザで見る（GitHub Pages）
+
+結果の一覧: https://yasuyuki-ikeda.github.io/cvpr_paper_ckecker/result/
+
+実行日ごとの見出しの下に、各回の表へのリンクが並ぶ。
 
 ### 定期実行（GitHub Actions）
 

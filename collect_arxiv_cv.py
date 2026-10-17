@@ -519,6 +519,59 @@ def write_html(rows, path, title):
     path.write_text(page, encoding="utf-8")
 
 
+INDEX_TEMPLATE = """<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>arXiv cs.CV 論文一覧</title>
+<style>
+:root { --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --link: #0969da; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --link: #4493f8; }
+}
+body { margin: 0 auto; max-width: 720px; padding: 24px 16px; background: var(--bg); color: var(--fg);
+  font: 15px/1.6 system-ui, "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+p { color: var(--muted); margin: 0 0 20px; }
+h2 { font-size: 16px; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+ul { margin: 0; padding-left: 20px; }
+a { color: var(--link); }
+.n { color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>arXiv cs.CV 論文一覧</h1>
+<p>実行日ごとの収集結果です。リンク先の表で絞り込みと並べ替えができます。</p>
+__ITEMS__
+</body>
+</html>
+"""
+
+
+def write_index(result_dir):
+    """result/index.html: links to every result page, grouped by run date (newest first)."""
+    sections = []
+    for day_dir in sorted((d for d in result_dir.iterdir() if d.is_dir()), reverse=True):
+        items = []
+        for page in sorted(day_dir.glob("*.html"), reverse=True):
+            match = re.fullmatch(r"arxiv_csCV_(\d{4}-\d\d-\d\d)_to_(\d{4}-\d\d-\d\d)", page.stem)
+            label = f"{match[1]} 〜 {match[2]} の投稿" if match else page.stem
+            csv_path = page.with_suffix(".csv")
+            if csv_path.exists():
+                with csv_path.open(encoding="utf-8-sig", newline="") as stream:
+                    count = max(sum(1 for _ in csv.reader(stream)) - 1, 0)
+                label += f' <span class="n">（{count} 件）</span>'
+            href = urllib.parse.quote(f"{day_dir.name}/{page.name}")
+            items.append(f'  <li><a href="{href}">{label}</a></li>')
+        if items:
+            sections.append(f"<h2>{html.escape(day_dir.name)} 実行</h2>\n<ul>\n"
+                            + "\n".join(items) + "\n</ul>")
+    body = "\n".join(sections) or "<p>まだ結果がありません。</p>"
+    (result_dir / "index.html").write_text(
+        INDEX_TEMPLATE.replace("__ITEMS__", body), encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", type=parse_date, help="JST start date: YYYY-MM-DD")
@@ -532,7 +585,14 @@ def main():
                         help="Do not send titles to the external translation API")
     parser.add_argument("--html-interval", type=float, default=3.0,
                         help="Minimum seconds between arXiv HTML requests (default 3.0)")
+    parser.add_argument("--index-only", action="store_true",
+                        help="Only rebuild result/index.html from the existing results")
     args = parser.parse_args()
+    if args.index_only:
+        RESULT_DIR.mkdir(exist_ok=True)
+        write_index(RESULT_DIR)
+        print(f"Updated {(RESULT_DIR / 'index.html').resolve()}")
+        return
     end = args.end or datetime.now(JST).date()
     if args.days < 1:
         parser.error("--days must be 1 or more")
@@ -589,6 +649,9 @@ def main():
     html_output = output.with_suffix(".html")
     write_html(rows, html_output, f"arXiv cs.CV {start} – {end}")
     print(f"Wrote {len(rows)} papers to {html_output.resolve()}")
+    if RESULT_DIR.is_dir():
+        write_index(RESULT_DIR)
+        print(f"Updated {(RESULT_DIR / 'index.html').resolve()}")
 
 
 if __name__ == "__main__":
