@@ -83,8 +83,11 @@ HEADERS = [
     "物体検出・追跡", "画素単位セグメンテーション", "画像・動画編集", "画像・動画生成",
     "画像・動画から3D・深度", "3D物体検出・セグメンテーション", "3D生成・編集",
     "画像・動画・3Dからテキスト", "高速化・軽量化・学習効率化", "非RGBセンサー使用",
+    "ロボット動作", "自動運転", "医療画像", "産業画像",
     "arXiv ID", "URL", "alphaXiv URL",
 ]
+VIEWPOINT_COUNT = 14  # the ● columns, right after the code-status column
+HTML_COLUMNS = 5 + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
 
 
 _rate_lock = threading.Lock()
@@ -299,11 +302,19 @@ def classify(paper):
         mark(bool(re.search(rgb + "|" + three_d, text) and re.search(r"\b(caption\w*|image-to-text|video-to-text|visual question|vqa|ocr|text recognition|document understanding|report generation)\b", text))),
         mark(bool(re.search(r"\b(efficient|efficiency|accelerat\w*|faster|speedup|lightweight|compression|compress\w*|prun\w*|quantiz\w*|distill\w*|low-rank|token merg\w*|caching|kv cache|parameter-efficient|compute-efficient|memory-efficient)\b", text))),
         mark(bool(re.search(r"\b(event camera|event-based|lidar|radar|infrared|thermal|hyperspectral|multispectral|computed tomography|mri|x-ray|ultrasound|sonar)\b", text))),
+        # Robot motion: manipulation, locomotion, embodied agents, VLA policies.
+        mark(bool(re.search(r"\b(robot\w*|(?:robotic|object|dexterous|bimanual) manipulation|manipulation (?:tasks?|polic(?:y|ies))|grasp(?:ing|s)?|humanoid\w*|locomotion|embodied|vision-language-action|vla|visuomotor|teleoperat\w*|end-effector|legged|quadruped\w*)\b", text))),
+        # Autonomous driving.
+        mark(bool(re.search(r"\b(autonomous driving|self-driving|autonomous vehicles?|driving scenes?|end-to-end driving|driving policy|adas|bird's-eye.view|bev|nuscenes|waymo|argoverse|carla|motion forecasting|trajectory prediction|traffic|pedestrians?)\b", text))),
+        # Medical imaging.
+        mark(bool(re.search(r"\b(medical|clinical|clinic\w*|radiolog\w*|patholog\w*|histopatholog\w*|whole.slide|computed tomography|ct scans?|mri|x-ray|chest|ultrasound|endoscop\w*|colonoscop\w*|fundus|retina\w*|dermatolog\w*|skin lesion\w*|lesions?|tumou?rs?|cancer|patients?|surgical|surgery|mammograph\w*)\b", text))),
+        # Industrial imaging: inspection, defects, manufacturing.
+        mark(bool(re.search(r"\b(industrial|manufactur\w*|factory|factories|defect detection|defect inspection|defect segmentation|defective|surface defects?|(?:visual|optical|automated|product) inspection|mvtec\w*|pcb|printed circuit|production line|assembly line|weld\w*|steel)\b", text))),
     ]
 
 
-#             発表日 英題 和訳 企業 コード  観点×10  ID  URL  alphaXiv
-XLSX_WIDTHS = [11, 60, 50, 24, 10] + [9] * 10 + [12, 32, 36]
+#             発表日 英題 和訳 企業 コード  観点×14  ID  URL  alphaXiv
+XLSX_WIDTHS = [11, 60, 50, 24, 10] + [9] * VIEWPOINT_COUNT + [12, 32, 36]
 
 
 def write_xlsx(rows, path):
@@ -322,7 +333,7 @@ def write_xlsx(rows, path):
         cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
     for row in sheet.iter_rows(min_row=2):
         row[0].number_format = "yyyy-mm-dd"
-        for cell in row[4:15]:  # code status and the 10 ● columns
+        for cell in row[4:5 + VIEWPOINT_COUNT]:  # code status and the ● columns
             cell.alignment = Alignment(horizontal="center")
         for cell in row[-2:]:  # arXiv and alphaXiv URLs
             cell.hyperlink = cell.value
@@ -402,9 +413,10 @@ a { color: var(--link); }
 <script id="data" type="application/json">__DATA__</script>
 <script>
 const {headers, rows} = JSON.parse(document.getElementById("data").textContent);
-// Column kinds: date, text (free-text filter), code, flag (●), id, link (no filter).
+// Column kinds: date, text (free-text filter), code, flag (●). Each row carries
+// one extra, hidden element at the end: the alphaXiv URL for the title link.
 const kinds = ["date", "text", "text", "text", "code"]
-  .concat(Array(10).fill("flag"), ["id", "link", "link"]);
+  .concat(Array(headers.length - 5).fill("flag"));
 const widths = {1: "w-title", 2: "w-ja", 3: "w-co"};
 const filters = [];
 let sortCol = 0, sortDir = -1;
@@ -414,8 +426,8 @@ const filterRow = document.getElementById("filters");
 headers.forEach((name, i) => {
   const th = document.createElement("th");
   th.textContent = name;
-  th.className = (kinds[i] === "link" ? "" : "sort ") + (widths[i] || (kinds[i] === "flag" ? "w-flag" : ""));
-  if (kinds[i] !== "link") th.addEventListener("click", () => {
+  th.className = "sort " + (widths[i] || (kinds[i] === "flag" ? "w-flag" : ""));
+  th.addEventListener("click", () => {
     sortDir = sortCol === i ? -sortDir : (kinds[i] === "flag" ? -1 : 1);
     sortCol = i;
     render();
@@ -424,11 +436,11 @@ headers.forEach((name, i) => {
 
   const cell = document.createElement("th");
   let control = null;
-  if (kinds[i] === "text" || kinds[i] === "id") {
+  if (kinds[i] === "text") {
     control = document.createElement("input");
     control.type = "search";
     control.placeholder = "含む文字";
-  } else if (kinds[i] !== "link") {
+  } else {
     const values = kinds[i] === "flag" ? ["●", ""]
       : [...new Set(rows.map(r => r[i]))].sort().reverse();
     control = document.createElement("select");
@@ -465,13 +477,12 @@ function render() {
   body.id = "rows";
   for (const row of shown) {
     const tr = body.insertRow();
-    row.forEach((value, i) => {
+    headers.forEach((_, i) => {
       const td = tr.insertCell();
-      if (i === 1) td.appendChild(link(row[17], value));  // title opens alphaXiv
-      else if (kinds[i] === "link") td.appendChild(link(value, value));
-      else td.textContent = value;
+      if (i === 1) td.appendChild(link(row[row.length - 1], row[i]));  // title opens alphaXiv
+      else td.textContent = row[i];
       if (kinds[i] === "code" || kinds[i] === "flag") td.className = "c";
-      else if (kinds[i] !== "text") td.className = "nw";
+      else if (kinds[i] === "date") td.className = "nw";
     });
   }
   document.getElementById("rows").replaceWith(body);
@@ -496,7 +507,12 @@ render();
 def write_html(rows, path, title):
     """Single self-contained page: sticky header, per-column filters, sorting, links."""
     data = json.dumps(
-        {"headers": HEADERS, "rows": [[row[0].isoformat(), *row[1:]] for row in rows]},
+        {
+            "headers": HEADERS[:HTML_COLUMNS],
+            "rows": [
+                [row[0].isoformat(), *row[1:HTML_COLUMNS], row[-1]] for row in rows
+            ],
+        },
         ensure_ascii=False,
     ).replace("</", "<\\/")  # keep "</script>" inside titles from closing the tag
     page = HTML_TEMPLATE.replace("__TITLE__", html.escape(title)).replace("__DATA__", data)

@@ -4,7 +4,7 @@ Computer Vision & Pattern Recognition 関連の最新論文をチェックする
 
 ## collect_arxiv_cv.py 仕様
 
-arXiv の cs.CV（Computer Vision and Pattern Recognition）論文を期間指定で集め、和訳・所属企業・コード公開・観点 10 種を付けた一覧を CSV・xlsx・HTML で出力する。
+arXiv の cs.CV（Computer Vision and Pattern Recognition）論文を期間指定で集め、和訳・所属企業・コード公開・観点 14 種を付けた一覧を CSV・xlsx・HTML で出力する。
 
 ### 実行方法
 
@@ -35,7 +35,7 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
    - あり: GitHub / GitLab / Bitbucket / Codeberg / Hugging Face / github.io の URL、または「code is available」「project page」など
    - 公開予定: 「code will be released」など
    - なし: 上記以外
-5. **観点の判定**: タイトルとアブストラクトのキーワード（正規表現）で 10 観点を判定し、該当すれば「●」。
+5. **観点の判定**: タイトルとアブストラクトのキーワード（正規表現）で 14 観点を判定し、該当すれば「●」。
 6. **出力**: `result/<実行日>/`（例: `result/2026-10-17/`）に CSV・xlsx・HTML を書き出す。フォルダは自動で作る。
 
 通信は失敗時（429・5xx・ネットワーク）に最大 4 回やり直す。arXiv の利用条件（3 秒に 1 回・接続 1 本）に合わせている。
@@ -59,13 +59,17 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
 | M | 画像・動画・3Dからテキスト | 観点⑧ |
 | N | 高速化・軽量化・学習効率化 | 観点⑨ |
 | O | 非RGBセンサー使用 | 観点⑩ |
-| P | arXiv ID | |
-| Q | URL | arXiv の論文ページ |
-| R | alphaXiv URL | alphaXiv の論文ページ |
+| P | ロボット動作 | 観点⑪ ロボットの動作に関係（操作・把持・移動・VLA など） |
+| Q | 自動運転 | 観点⑫ 自動運転に関係（運転シーン・BEV・nuScenes・交通など） |
+| R | 医療画像 | 観点⑬ 医療画像に関係（CT・MRI・X 線・病理・臨床など） |
+| S | 産業画像 | 観点⑭ 産業画像に関係（外観検査・欠陥検出・製造など） |
+| T | arXiv ID | HTML では表示しない |
+| U | URL | arXiv の論文ページ。HTML では表示しない |
+| V | alphaXiv URL | alphaXiv の論文ページ。HTML では表示しない |
 
 - **CSV**: UTF-8（BOM 付き）。Excel でそのまま開ける。
 - **xlsx**: シート名 `cs.CV`。1 行目を固定、全列にフィルター、URL と英文タイトルはクリックで開くリンク、発表日は日付型。
-- **HTML**: ブラウザで開く 1 ファイル（外部ファイル・ネット接続は不要）。見出しを固定、列ごとの絞り込み（タイトル・和訳・企業名・ID は文字入力、発表日・コード有無・観点は選択式）、見出しクリックで並べ替え、表示件数の表示、絞り込みの解除ボタン。リンクは xlsx と同じ。ダークモードに対応。
+- **HTML**: ブラウザで開く 1 ファイル（外部ファイル・ネット接続は不要）。見出しを固定、列ごとの絞り込み（タイトル・和訳・企業名は文字入力、発表日・コード有無・観点は選択式）、見出しクリックで並べ替え、表示件数の表示、絞り込みの解除ボタン。表示は A〜S 列で、arXiv ID と 2 つの URL の列は表示しない（英文タイトルから alphaXiv を開ける）。ダークモードに対応。
 
 ### 制約・注意点
 
