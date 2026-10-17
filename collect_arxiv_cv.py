@@ -102,7 +102,7 @@ def throttle(host, interval):
 
 
 def fetch(url, params=None, timeout=90, retries=4, interval=0.0):
-    """GET with retry on transient errors (429/5xx/network). 404 etc. raise at once."""
+    """GET with retry on transient errors (406/429/5xx/network). 404 etc. raise at once."""
     if params:
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params)
     host = urllib.parse.urlsplit(url).netloc
@@ -114,7 +114,7 @@ def fetch(url, params=None, timeout=90, retries=4, interval=0.0):
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return response.read()
         except urllib.error.HTTPError as error:
-            if error.code not in (429, 500, 502, 503, 504) or attempt == retries:
+            if error.code not in (406, 429, 500, 502, 503, 504) or attempt == retries:
                 raise
         except OSError:
             if attempt == retries:
