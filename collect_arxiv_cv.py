@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from email.utils import parsedate_to_datetime
 from datetime import date, datetime, timedelta
@@ -80,14 +81,16 @@ AMBIGUOUS_COMPANIES = {
 }
 HEADERS = [
     "発表日", "英文タイトル", "和訳タイトル", "著者の所属する企業名", "ソースコードの開示有無",
+    "入力データ", "出力データ",
     "物体検出・追跡", "画素単位セグメンテーション", "画像・動画編集", "画像・動画生成",
     "画像・動画から3D・深度", "3D物体検出・セグメンテーション", "3D生成・編集",
     "画像・動画・3Dからテキスト", "高速化・軽量化・学習効率化", "非RGBセンサー使用",
     "ロボット動作", "自動運転", "医療画像", "産業画像", "人物",
     "arXiv ID", "URL", "alphaXiv URL",
 ]
-VIEWPOINT_COUNT = 15  # the ● columns, right after the code-status column
-HTML_COLUMNS = 5 + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
+LEAD_COLUMNS = 7  # 発表日 … 出力データ, before the ● columns
+VIEWPOINT_COUNT = 15  # the ● columns
+HTML_COLUMNS = LEAD_COLUMNS + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
 
 
 _rate_lock = threading.Lock()
@@ -283,6 +286,138 @@ def code_status(summary):
     return "なし"
 
 
+# Input/output data columns: a keyword-based guess from the title and abstract.
+# Data kinds, most specific first. Each label is matched once per text window.
+DATA_KINDS = [
+    ("医用画像", r"\b(?:medical|clinical|radiolog\w*|ct scans?|computed tomography|mri|x-rays?|ultrasound|histopatholog\w*|patholog\w* (?:images?|slides?)|whole[- ]slide|endoscop\w*|fundus|mammogra\w*)\b"),
+    ("衛星・航空画像", r"\b(?:satellite|aerial|remote[- ]sensing|earth observation|sar)\b"),
+    ("LiDAR", r"\b(?:lidar)\b"),
+    ("レーダー", r"\b(?:radar)\b"),
+    ("イベントカメラ", r"\b(?:event cameras?|event streams?|event data|events)\b"),
+    ("赤外線・熱画像", r"\b(?:infrared|thermal)\b"),
+    ("ハイパースペクトル画像", r"\b(?:hyperspectral|multispectral)\b"),
+    ("点群", r"\b(?:point clouds?|pointclouds?|3d points)\b"),
+    ("メッシュ", r"\b(?:meshes|mesh)\b"),
+    ("3D ガウス", r"\b(?:3d gaussians?|gaussian splat\w*|3dgs)\b"),
+    ("深度", r"\b(?:depth maps?|depth)\b"),
+    ("多視点画像", r"\b(?:multi-view images?|multiview images?|multi-view|multiple views)\b"),
+    ("動画", r"\b(?:videos?|video clips?|frames|footage)\b"),
+    ("画像", r"\b(?:images?|photos?|photographs?|pictures?|rgb)\b"),
+    ("音声", r"\b(?:audio|speech|sound)\b"),
+    ("テキスト", r"\b(?:texts?|textual|captions?|prompts?|instructions?|questions?|queries|query|language descriptions?|natural language|documents?)\b"),
+    ("3D データ", r"\b(?:3d (?:scenes?|shapes?|models?|assets?|objects?|data|representations?)|nerf|voxels?)\b"),
+    ("姿勢", r"\b(?:poses?|keypoints?|skeletons?|smpl\w*)\b"),
+    ("軌跡", r"\b(?:trajector(?:y|ies)|tracks|motion paths?)\b"),
+    ("行動", r"\b(?:robot actions?|actions?|control signals?|motor commands?|policies|policy)\b"),
+    ("マスク", r"\b(?:masks?|segmentation maps?|segmentations?)\b"),
+    ("バウンディングボックス", r"\b(?:bounding box(?:es)?|boxes)\b"),
+    ("ラベル", r"\b(?:labels?|class(?:es)?|categories)\b"),
+    ("センサー信号", r"\b(?:imu|inertial|eeg|sensor signals?|wifi)\b"),
+]
+# Kinds that make sense as an input (outputs-only kinds are excluded here).
+INPUT_KINDS = {
+    "医用画像", "衛星・航空画像", "LiDAR", "レーダー", "イベントカメラ", "赤外線・熱画像",
+    "ハイパースペクトル画像", "点群", "メッシュ", "3D ガウス", "深度", "多視点画像", "動画",
+    "画像", "音声", "テキスト", "3D データ", "姿勢", "センサー信号",
+}
+# Words that introduce the input or the output; the next ~8 words are scanned.
+INPUT_CUES = r"\b(?:from|given|takes?|taking|accepts?|input(?:s|ting)?|conditioned on|condition(?:ing)? on|consum\w+|ingest\w*|observ\w+)\b"
+OUTPUT_CUES = r"\b(?:generat\w*|synthesi[sz]\w*|predict\w*|estimat\w*|reconstruct\w*|produc\w*|outputs?|render\w*|recover\w*|forecast\w*|infer\w*|creat\w*|edit\w*|segment\w*|detect\w*|classif\w*|caption\w*|answer\w*|translat\w*|convert\w*|into)\b"
+# Tasks that fix the output (and sometimes the input) regardless of wording.
+TASK_RULES = [
+    # (pattern, inputs, outputs)
+    (r"\b(?:vision-language-action|vla)\b", ["画像", "テキスト"], ["行動"]),
+    (r"\btext-to-(?:image|img)\b", ["テキスト"], ["画像"]),
+    (r"\btext-to-video\b", ["テキスト"], ["動画"]),
+    (r"\btext-to-3d\b", ["テキスト"], ["3D データ"]),
+    (r"\bimage-to-video\b", ["画像"], ["動画"]),
+    (r"\bimage-to-3d\b", ["画像"], ["3D データ"]),
+    (r"\bvideo-to-(?:audio|sound)\b", ["動画"], ["音声"]),
+    (r"\b(?:visual question answering|vqa|multimodal large language models?|mllms?|vision-language models?|vlms?|lvlms?)\b", ["画像", "テキスト"], ["テキスト"]),
+    (r"\b(?:image captioning|video captioning|report generation)\b", [], ["テキスト"]),
+    (r"\b(?:semantic|instance|panoptic|medical image|referring)? ?segmentation\b", [], ["マスク"]),
+    (r"\b(?:object detection|detector|bounding box)\b", [], ["バウンディングボックス"]),
+    (r"\b(?:depth estimation|monocular depth)\b", [], ["深度"]),
+    (r"\b(?:pose estimation|human mesh recovery|hand reconstruction)\b", [], ["姿勢"]),
+    (r"\b(?:trajectory prediction|motion forecasting|tracking)\b", [], ["軌跡"]),
+    (r"\b(?:3d reconstruction|novel view synthesis|novel-view synthesis)\b", [], ["3D データ"]),
+    (r"\b(?:image editing|image restoration|super-resolution|deblurring|denoising|inpainting|dehazing|low-light enhancement)\b", ["画像"], ["画像"]),
+    (r"\b(?:video editing|video generation|video synthesis)\b", [], ["動画"]),
+    (r"\b(?:image generation|image synthesis)\b", [], ["画像"]),
+    (r"\b(?:classification|recognition|anomaly detection|retrieval|forgery detection|deepfake detection|ai-generated image detection)\b", [], ["ラベル"]),
+]
+# Used only when nothing above found an output: broader task words.
+FALLBACK_OUTPUT_RULES = [
+    (r"\b(?:policy|policies|agents?|navigation|manipulation|planning|planner)\b", "行動"),
+    (r"\b(?:world models?)\b", "動画"),
+    (r"\b(?:detection|detector)\b", "バウンディングボックス"),
+    (r"\b(?:reconstruct\w*|surface|geometry)\b", "3D データ"),
+    (r"\b(?:registration|correspondences?|matching|localization)\b", "位置・対応関係"),
+    (r"\b(?:motion capture|mocap)\b", "姿勢"),
+    (r"\b(?:render\w*|supersampling|upsampling)\b", "画像"),
+    (r"\b(?:survival|severity|regression|counting|quality assessment|assessment)\b", "数値"),
+    (r"\b(?:representations?|embeddings?|features?|encoders?|pre-?train\w*|backbones?)\b", "特徴表現"),
+    (r"\b(?:understanding|reasoning|llms?)\b", "テキスト"),
+]
+KIND_ORDER = ([label for label, _ in DATA_KINDS]
+              + [label for _, label in FALLBACK_OUTPUT_RULES] + ["データセット・評価"])
+
+
+def kinds_in(text, allowed=None):
+    found = [label for label, pattern in DATA_KINDS
+             if (allowed is None or label in allowed) and re.search(pattern, text)]
+    # A specific image kind makes the generic "画像" redundant.
+    if "画像" in found and any(k in found for k in ("医用画像", "衛星・航空画像", "赤外線・熱画像", "ハイパースペクトル画像", "多視点画像")):
+        found.remove("画像")
+    return found
+
+
+# An output phrase such as "predicts depth from images" stops at the input cue.
+WINDOW_STOP = r"\b(?:from|given|using|based on|conditioned on|with|via|by)\b|[.;]"
+
+
+def windows(text, cues, width=60, stop=None):
+    found = []
+    for m in re.finditer(cues, text):
+        window = text[m.end():m.end() + width]
+        if stop:
+            window = re.split(stop, window, maxsplit=1)[0]
+        found.append(window)
+    return found
+
+
+def data_io(paper, limit=3):
+    """Rule-based guess of the input and output data, as short Japanese labels."""
+    text = f"{paper['title']}. {paper['summary']}".lower()
+    inputs, outputs = Counter(), Counter()
+    for pattern, task_in, task_out in TASK_RULES:
+        if re.search(pattern, text):
+            inputs.update({k: 3 for k in task_in})
+            outputs.update({k: 3 for k in task_out})
+    for window in windows(text, INPUT_CUES):
+        inputs.update({k: 2 for k in kinds_in(window, INPUT_KINDS)})
+    for window in windows(text, OUTPUT_CUES, stop=WINDOW_STOP):
+        outputs.update({k: 2 for k in kinds_in(window)})
+    # X-to-Y phrases: "image-to-video", "video-to-text", ...
+    for left, right in re.findall(r"\b([a-z0-9]+)-to-([a-z0-9]+)\b", text):
+        inputs.update({k: 2 for k in kinds_in(left, INPUT_KINDS)})
+        outputs.update({k: 2 for k in kinds_in(right)})
+    if not inputs:  # fall back to the data kinds the abstract mentions
+        inputs.update(kinds_in(text, INPUT_KINDS))
+    if not outputs and re.search(r"\b(?:benchmarks?|datasets?)\b", paper["title"].lower()):
+        outputs["データセット・評価"] = 1
+    if not outputs:
+        for pattern, label in FALLBACK_OUTPUT_RULES:
+            if re.search(pattern, text):
+                outputs[label] = 1
+                break
+
+    def top(counter):
+        ranked = sorted(counter, key=lambda k: (-counter[k], KIND_ORDER.index(k)))
+        return "・".join(ranked[:limit])
+    return top(inputs), top(outputs)
+
+
 def mark(condition):
     return "●" if condition else ""
 
@@ -317,8 +452,8 @@ def classify(paper):
     ]
 
 
-#             発表日 英題 和訳 企業 コード  観点×14  ID  URL  alphaXiv
-XLSX_WIDTHS = [11, 60, 50, 24, 10] + [9] * VIEWPOINT_COUNT + [12, 32, 36]
+#             発表日 英題 和訳 企業 コード 入力 出力  観点  ID  URL  alphaXiv
+XLSX_WIDTHS = [11, 60, 50, 24, 10, 22, 22] + [9] * VIEWPOINT_COUNT + [12, 32, 36]
 
 
 def write_xlsx(rows, path):
@@ -337,7 +472,7 @@ def write_xlsx(rows, path):
         cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
     for row in sheet.iter_rows(min_row=2):
         row[0].number_format = "yyyy-mm-dd"
-        for cell in row[4:5 + VIEWPOINT_COUNT]:  # code status and the ● columns
+        for cell in [row[4], *row[LEAD_COLUMNS:HTML_COLUMNS]]:  # code status and the ● columns
             cell.alignment = Alignment(horizontal="center")
         for cell in row[-2:]:  # arXiv and alphaXiv URLs
             cell.hyperlink = cell.value
@@ -399,6 +534,7 @@ td.c { text-align: center; white-space: nowrap; }
 td.nw { white-space: nowrap; }
 a { color: var(--link); }
 .w-title { min-width: 360px; } .w-ja { min-width: 280px; } .w-co { min-width: 140px; }
+.w-io { min-width: 130px; }
 .w-flag { min-width: 64px; max-width: 80px; }
 </style>
 </head>
@@ -417,11 +553,14 @@ a { color: var(--link); }
 <script id="data" type="application/json">__DATA__</script>
 <script>
 const {headers, rows} = JSON.parse(document.getElementById("data").textContent);
-// Column kinds: date, text (free-text filter), code, flag (●). Each row carries
-// one extra, hidden element at the end: the alphaXiv URL for the title link.
-const kinds = ["date", "text", "text", "text", "code"]
-  .concat(Array(headers.length - 5).fill("flag"));
-const widths = {1: "w-title", 2: "w-ja", 3: "w-co"};
+// Column kinds: date, text (free-text filter), company (one dropdown entry per
+// company; a cell can list several, joined by "; "), code, flag (●). Each row
+// carries one extra, hidden element at the end: the alphaXiv URL for the title.
+const kinds = ["date", "text", "text", "company", "code", "text", "text"]
+  .concat(Array(headers.length - 7).fill("flag"));
+const widths = {1: "w-title", 2: "w-ja", 3: "w-co", 5: "w-io", 6: "w-io"};
+const ANY = "\u0000", SOME = "\u0001";  // "すべて" and "(企業あり)"
+const companiesOf = value => value ? value.split("; ") : [];
 const filters = [];
 let sortCol = 0, sortDir = -1;
 
@@ -444,11 +583,20 @@ headers.forEach((name, i) => {
     control = document.createElement("input");
     control.type = "search";
     control.placeholder = "含む文字";
+  } else if (kinds[i] === "company") {
+    const counts = {};
+    rows.forEach(r => companiesOf(r[i]).forEach(c => { counts[c] = (counts[c] || 0) + 1; }));
+    control = document.createElement("select");
+    control.add(new Option("すべて", ANY));
+    control.add(new Option("(企業あり)", SOME));
+    control.add(new Option("(空欄)", ""));
+    Object.keys(counts).sort((a, b) => a.localeCompare(b, "en", {sensitivity: "base"}))
+      .forEach(c => control.add(new Option(`${c} (${counts[c]})`, c)));
   } else {
     const values = kinds[i] === "flag" ? ["●", ""]
       : [...new Set(rows.map(r => r[i]))].sort().reverse();
     control = document.createElement("select");
-    control.add(new Option("すべて", "\u0000"));
+    control.add(new Option("すべて", ANY));
     values.forEach(v => control.add(new Option(v === "" ? "(空欄)" : v, v)));
   }
   if (control) {
@@ -462,7 +610,12 @@ headers.forEach((name, i) => {
 function matches(row) {
   return filters.every((control, i) => {
     if (!control) return true;
-    if (control.tagName === "SELECT") return control.value === "\u0000" || row[i] === control.value;
+    if (control.value === ANY) return true;
+    if (kinds[i] === "company") {
+      if (control.value === SOME) return row[i] !== "";
+      return control.value === "" ? row[i] === "" : companiesOf(row[i]).includes(control.value);
+    }
+    if (control.tagName === "SELECT") return row[i] === control.value;
     const query = control.value.trim().toLowerCase();
     return !query || row[i].toLowerCase().includes(query);
   });
@@ -498,7 +651,7 @@ function render() {
 }
 
 document.getElementById("reset").addEventListener("click", () => {
-  filters.forEach(control => { if (control) control.value = control.tagName === "SELECT" ? "\u0000" : ""; });
+  filters.forEach(control => { if (control) control.value = control.tagName === "SELECT" ? ANY : ""; });
   render();
 });
 render();
@@ -635,6 +788,7 @@ def main():
             paper["ja_title"],
             companies_from_html(html_pages[paper["id"]]),
             code_status(paper["summary"]),
+            *data_io(paper),
             *classify(paper),
             paper["id"],
             f"https://arxiv.org/abs/{paper['id']}",

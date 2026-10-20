@@ -14,7 +14,7 @@ if errorlevel 1 (
     goto end
 )
 
-python -c "import openpyxl" >nul 2>nul
+python -c "import openpyxl, tzdata" >nul 2>nul
 if errorlevel 1 (
     echo Installing required packages...
     python -m pip install -r requirements.txt
