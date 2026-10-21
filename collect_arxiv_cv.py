@@ -91,6 +91,13 @@ HEADERS = [
 LEAD_COLUMNS = 7  # 発表日 … 出力データ, before the ● columns
 VIEWPOINT_COUNT = 15  # the ● columns
 HTML_COLUMNS = LEAD_COLUMNS + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
+# Group names shown above the column headers in the xlsx and HTML:
+# (name, first column index, number of columns).
+HEADER_GROUPS = [
+    ("入出力データ", 5, 2),               # 入力データ, 出力データ
+    ("タスク", LEAD_COLUMNS, 10),          # 観点①〜⑩
+    ("アプリケーション", LEAD_COLUMNS + 10, 5),  # 観点⑪〜⑮
+]
 
 
 _rate_lock = threading.Lock()
@@ -457,20 +464,29 @@ XLSX_WIDTHS = [11, 60, 50, 24, 10, 22, 22] + [9] * VIEWPOINT_COUNT + [12, 32, 36
 
 
 def write_xlsx(rows, path):
-    """Same table as the CSV, with a frozen header row, filters and clickable URLs."""
+    """Same table as the CSV, under a row of group names, with frozen headers,
+    filters and clickable URLs."""
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "cs.CV"
+    sheet.append([None] * len(HEADERS))  # row 1: group names, filled in below
     sheet.append(HEADERS)
     for row in rows:
         sheet.append(row)
 
     header_fill = PatternFill("solid", fgColor="DDEBF7")
-    for cell in sheet[1]:
+    for name, first, count in HEADER_GROUPS:
+        cell = sheet.cell(row=1, column=first + 1, value=name)
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        sheet.merge_cells(start_row=1, start_column=first + 1,
+                          end_row=1, end_column=first + count)
+    for cell in sheet[2]:
         cell.font = Font(bold=True)
         cell.fill = header_fill
         cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
-    for row in sheet.iter_rows(min_row=2):
+    for row in sheet.iter_rows(min_row=3):
         row[0].number_format = "yyyy-mm-dd"
         for cell in [row[4], *row[LEAD_COLUMNS:HTML_COLUMNS]]:  # code status and the ● columns
             cell.alignment = Alignment(horizontal="center")
@@ -481,10 +497,10 @@ def write_xlsx(rows, path):
         row[1].style = "Hyperlink"
     for index, width in enumerate(XLSX_WIDTHS, 1):
         sheet.column_dimensions[get_column_letter(index)].width = width
-    sheet.row_dimensions[1].height = 45
+    sheet.row_dimensions[2].height = 45
 
-    sheet.freeze_panes = "A2"
-    sheet.auto_filter.ref = sheet.dimensions
+    sheet.freeze_panes = "A3"
+    sheet.auto_filter.ref = f"A2:{get_column_letter(len(HEADERS))}{sheet.max_row}"
     workbook.save(path)
 
 
@@ -524,6 +540,8 @@ th.sort::after { content: " \2195"; color: var(--muted); }
 th.asc::after { content: " \25B2"; color: var(--fg); }
 th.desc::after { content: " \25BC"; color: var(--fg); }
 tr.filters th { font-weight: normal; padding: 3px 4px; }
+th.group { font-weight: 700; }
+th.blank { background: var(--bg); border-right-color: transparent; }
 th input, th select { width: 100%; font: inherit; padding: 1px 3px; color: var(--fg);
   background: var(--bg); border: 1px solid var(--line); border-radius: 3px; }
 td { padding: 3px 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
@@ -546,13 +564,13 @@ a { color: var(--link); }
 </header>
 <div class="wrap">
   <table>
-    <thead><tr id="heads"></tr><tr class="filters" id="filters"></tr></thead>
+    <thead><tr id="groups"></tr><tr id="heads"></tr><tr class="filters" id="filters"></tr></thead>
     <tbody id="rows"></tbody>
   </table>
 </div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const {headers, rows} = JSON.parse(document.getElementById("data").textContent);
+const {headers, groups, rows} = JSON.parse(document.getElementById("data").textContent);
 // Column kinds: date, text (free-text filter), company (one dropdown entry per
 // company; a cell can list several, joined by "; "), code, flag (●). Each row
 // carries one extra, hidden element at the end: the alphaXiv URL for the title.
@@ -563,6 +581,22 @@ const ANY = "\u0000", SOME = "\u0001";  // "すべて" and "(企業あり)"
 const companiesOf = value => value ? value.split("; ") : [];
 const filters = [];
 let sortCol = 0, sortDir = -1;
+
+// Top row: group names spanning their columns, empty cells elsewhere.
+const groupRow = document.getElementById("groups");
+for (let i = 0; i < headers.length; i++) {
+  const group = groups.find(g => g.first === i);
+  const th = document.createElement("th");
+  if (group) {
+    th.textContent = group.name;
+    th.colSpan = group.count;
+    th.className = "group";
+    i += group.count - 1;
+  } else {
+    th.className = "blank";
+  }
+  groupRow.appendChild(th);
+}
 
 const headRow = document.getElementById("heads");
 const filterRow = document.getElementById("filters");
@@ -666,6 +700,10 @@ def write_html(rows, path, title):
     data = json.dumps(
         {
             "headers": HEADERS[:HTML_COLUMNS],
+            "groups": [
+                {"name": name, "first": first, "count": count}
+                for name, first, count in HEADER_GROUPS
+            ],
             "rows": [
                 [row[0].isoformat(), *row[1:HTML_COLUMNS], row[-1]] for row in rows
             ],
