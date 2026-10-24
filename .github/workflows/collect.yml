@@ -21,7 +21,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
 
@@ -42,7 +42,18 @@ jobs:
           DAYS: ${{ github.event.inputs.days || '7' }}
         run: |
           END=$(date -d "2 days ago" +%F)
-          python -u collect_arxiv_cv.py --end "$END" --days "$DAYS"
+          # arXiv's servers are sometimes overloaded for a while (429/503), even
+          # after the script's own retries and fallback; try again later.
+          for attempt in 1 2 3; do
+            if python -u collect_arxiv_cv.py --end "$END" --days "$DAYS"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Attempt $attempt failed; retrying in 20 minutes."
+              sleep 1200
+            fi
+          done
+          exit 1
 
       - name: Commit and push results
         run: |

@@ -132,7 +132,7 @@ def fetch(url, params=None, timeout=90, retries=4, interval=0.0):
         except OSError:
             if attempt == retries:
                 raise
-        time.sleep(5 * (attempt + 1))
+        time.sleep(15 * 2 ** attempt)  # 15, 30, 60, 120 s: give an overloaded server time
 
 
 def clean(value):
@@ -150,58 +150,128 @@ OAI_NS = {
 }
 
 
+API_URL = "https://export.arxiv.org/api/query"
+ATOM = "{http://www.w3.org/2005/Atom}"
+OPENSEARCH = "{http://a9.com/-/spec/opensearch/1.1/}"
+
+
 def collect_entries(start, end):
+    """cs.CV papers whose first version (v1) was submitted in [start, end] JST.
+
+    The search API answers a week in a couple of requests; OAI-PMH is the
+    fallback when the API refuses (it has returned 429 for hours at a time).
+    """
+    try:
+        return collect_entries_api(start, end)
+    except OSError as error:
+        print(f"arXiv API failed ({error}); falling back to OAI-PMH.", flush=True)
+        return collect_entries_oai(start, end)
+
+
+def jst_to_utc_stamp(day):
+    """JST midnight of `day` as the API's UTC timestamp, e.g. 202610151500."""
+    midnight = datetime.combine(day, datetime.min.time(), JST)
+    return midnight.astimezone(ZoneInfo("UTC")).strftime("%Y%m%d%H%M")
+
+
+def collect_entries_api(start, end, page_size=500):
+    query = (f"cat:cs.CV AND submittedDate:[{jst_to_utc_stamp(start)} "
+             f"TO {jst_to_utc_stamp(end + timedelta(days=1))}]")
+    papers, seen = [], set()
+    offset, total = 0, None
+    while total is None or offset < total:
+        params = {"search_query": query, "start": offset, "max_results": page_size,
+                  "sortBy": "submittedDate", "sortOrder": "descending"}
+        # arXiv's terms for the API: one request per 3 seconds.
+        root = ET.fromstring(fetch(API_URL, params, timeout=180, interval=3.0))
+        total = int(root.findtext(f"{OPENSEARCH}totalResults") or 0)
+        entries = root.findall(f"{ATOM}entry")
+        if not entries:
+            break
+        offset += len(entries)
+        for entry in entries:
+            submitted = datetime.fromisoformat(
+                entry.findtext(f"{ATOM}published").replace("Z", "+00:00")).astimezone(JST)
+            paper_id = re.sub(r"v\d+$", "", entry.findtext(f"{ATOM}id").rsplit("/", 1)[-1])
+            if not start <= submitted.date() <= end or paper_id in seen:
+                continue
+            seen.add(paper_id)
+            papers.append({
+                "id": paper_id,
+                "submitted": submitted,
+                "title": clean(entry.findtext(f"{ATOM}title")),
+                "summary": clean(entry.findtext(f"{ATOM}summary")),
+            })
+    if total and len(papers) < total * 0.9:  # the API sometimes returns short pages
+        raise OSError(f"API returned {len(papers)} of {total} papers")
+    papers.sort(key=lambda paper: paper["submitted"], reverse=True)
+    return papers
+
+
+def collect_entries_oai(start, end):
     """Harvest cs.CV papers whose first version (v1) was submitted in [start, end] JST.
 
     OAI-PMH selects by datestamp (last metadata change, UTC date), which is on or
     after the v1 submission. So harvest from the day before `start` (JST midnight is
     the previous day in UTC) up to today, then filter on the exact v1 timestamp.
+
+    The harvest asks for one datestamp day at a time: a request spanning many
+    days can take the server minutes before its first byte, and arXiv's CDN
+    then answers 503 "first byte timeout".
     """
     harvest_from = start - timedelta(days=1)
     harvest_until = datetime.now(JST).date()
-    params = {
-        "verb": "ListRecords",
-        "metadataPrefix": "arXivRaw",
-        "set": "cs",
-        "from": harvest_from.isoformat(),
-        "until": harvest_until.isoformat(),
-    }
+    days = [harvest_from + timedelta(days=n)
+            for n in range((harvest_until - harvest_from).days + 1)]
     papers, seen = [], set()
-    while params:
-        # arXiv's terms for OAI-PMH: one request per 3 seconds.
-        root = ET.fromstring(fetch(OAI_URL, params, timeout=180, interval=3.0))
-        error = root.find("oai:error", OAI_NS)
-        if error is not None:
-            if error.get("code") == "noRecordsMatch":
-                break
-            raise OSError(f"OAI-PMH error {error.get('code')}: {clean(error.text)}")
-        for record in root.iterfind("oai:ListRecords/oai:record", OAI_NS):
-            meta = record.find("oai:metadata/raw:arXivRaw", OAI_NS)
-            if meta is None:  # deleted record
-                continue
-            categories = (meta.findtext("raw:categories", "", OAI_NS)).split()
-            if "cs.CV" not in categories:
-                continue
-            v1 = meta.find("raw:version[@version='v1']/raw:date", OAI_NS)
-            if v1 is None:
-                continue
-            submitted = parsedate_to_datetime(v1.text).astimezone(JST)
-            paper_id = meta.findtext("raw:id", "", OAI_NS).strip()
-            if not start <= submitted.date() <= end or paper_id in seen:
-                continue
-            seen.add(paper_id)
-            papers.append(
-                {
-                    "id": paper_id,
-                    "submitted": submitted,
-                    "title": clean(meta.findtext("raw:title", "", OAI_NS)),
-                    "summary": clean(meta.findtext("raw:abstract", "", OAI_NS)),
-                }
-            )
-        token = root.findtext("oai:ListRecords/oai:resumptionToken", "", OAI_NS).strip()
-        params = {"verb": "ListRecords", "resumptionToken": token} if token else None
+    for day in days:
+        params = {
+            "verb": "ListRecords",
+            "metadataPrefix": "arXivRaw",
+            "set": "cs",
+            "from": day.isoformat(),
+            "until": day.isoformat(),
+        }
+        while params:
+            params = harvest_page(params, start, end, papers, seen)
     papers.sort(key=lambda paper: paper["submitted"], reverse=True)
     return papers
+
+
+def harvest_page(params, start, end, papers, seen):
+    """Fetch one OAI-PMH page, add matching papers; return the next page's params."""
+    # arXiv's terms for OAI-PMH: one request per 3 seconds.
+    root = ET.fromstring(fetch(OAI_URL, params, timeout=180, interval=3.0))
+    error = root.find("oai:error", OAI_NS)
+    if error is not None:
+        if error.get("code") == "noRecordsMatch":
+            return None
+        raise OSError(f"OAI-PMH error {error.get('code')}: {clean(error.text)}")
+    for record in root.iterfind("oai:ListRecords/oai:record", OAI_NS):
+        meta = record.find("oai:metadata/raw:arXivRaw", OAI_NS)
+        if meta is None:  # deleted record
+            continue
+        categories = (meta.findtext("raw:categories", "", OAI_NS)).split()
+        if "cs.CV" not in categories:
+            continue
+        v1 = meta.find("raw:version[@version='v1']/raw:date", OAI_NS)
+        if v1 is None:
+            continue
+        submitted = parsedate_to_datetime(v1.text).astimezone(JST)
+        paper_id = meta.findtext("raw:id", "", OAI_NS).strip()
+        if not start <= submitted.date() <= end or paper_id in seen:
+            continue
+        seen.add(paper_id)
+        papers.append(
+            {
+                "id": paper_id,
+                "submitted": submitted,
+                "title": clean(meta.findtext("raw:title", "", OAI_NS)),
+                "summary": clean(meta.findtext("raw:abstract", "", OAI_NS)),
+            }
+        )
+    token = root.findtext("oai:ListRecords/oai:resumptionToken", "", OAI_NS).strip()
+    return {"verb": "ListRecords", "resumptionToken": token} if token else None
 
 
 def translate(title):
@@ -801,7 +871,7 @@ def main():
     try:
         papers = collect_entries(start, end)
     except OSError as error:
-        parser.exit(1, f"arXiv OAI-PMH request failed ({error}). "
+        parser.exit(1, f"arXiv request failed on both the API and OAI-PMH ({error}). "
                        "If this is HTTP 429/503, wait several minutes and retry.\n")
     print(f"Found {len(papers)} cs.CV papers from {start} through {end} (JST).")
     if args.no_translate:
