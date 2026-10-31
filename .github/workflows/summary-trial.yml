@@ -1,0 +1,84 @@
+name: Summary trial
+
+# Trial for the 【課題】【方法】【従来からの進化】 summaries: runs small open
+# models with llama.cpp on the runner's CPU over the 20 papers in trial/papers.json,
+# plus the model-free sentence picker, and commits trial/out/ (report.md) back
+# to this branch.
+on:
+  push:
+    branches: [summary-trial]
+    paths: ["trial/*.py", "trial/papers.json", ".github/workflows/summary-trial.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: summary-trial
+  cancel-in-progress: true
+
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      LLAMA_TAG: b12024
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download llama.cpp
+        run: |
+          mkdir -p "$RUNNER_TEMP/llama"
+          curl -sSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/llama"
+          SERVER=$(find "$RUNNER_TEMP/llama" -name llama-server -type f | head -1)
+          echo "SERVER=$SERVER" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$(dirname "$SERVER")" >> "$GITHUB_ENV"
+          nproc; free -g; lscpu | grep -E "Model name|Flags" | cut -c1-200
+
+      - name: Download models
+        run: |
+          mkdir -p "$RUNNER_TEMP/models"
+          cd "$RUNNER_TEMP/models"
+          hf=https://huggingface.co
+          curl -sSLo q25-1.5b.gguf $hf/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
+          curl -sSLo q3-1.7b.gguf  $hf/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf
+          curl -sSLo q25-3b.gguf   $hf/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
+          curl -sSLo q3-4b.gguf    $hf/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf
+          ls -la
+
+      - name: Summarize with each model
+        run: |
+          mkdir -p trial/out
+          rm -f trial/out/*
+          M="$RUNNER_TEMP/models"
+          for model in q25-1.5b q3-1.7b q25-3b q3-4b; do
+            python -u trial/llm_summary.py "$SERVER" "$M/$model.gguf" "trial/out/$model-en.json"
+            echo "::notice title=$model en::$(python -c "import json;d=json.load(open('trial/out/$model-en.json'));print(d['sec_per_paper'],'s/paper')")"
+          done
+          for model in q25-1.5b q3-1.7b q25-3b; do
+            python -u trial/llm_summary.py "$SERVER" "$M/$model.gguf" "trial/out/$model-ja.json" --ja
+            echo "::notice title=$model ja::$(python -c "import json;d=json.load(open('trial/out/$model-ja.json'));print(d['sec_per_paper'],'s/paper')")"
+          done
+
+      - name: Pick sentences (no model) and build the report
+        run: |
+          python trial/extractive.py
+          python trial/report.py
+
+      - name: Commit the report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add trial/out
+          git commit -m "Summary trial results" || exit 0
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
