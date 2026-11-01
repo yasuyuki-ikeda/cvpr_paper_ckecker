@@ -885,7 +885,7 @@ INDEX_TEMPLATE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>arXiv cs.CV 論文一覧</title>
+<title>Computer Vision &amp; Pattern Recognition 論文一覧</title>
 <style>
 :root { --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --link: #0969da; }
 @media (prefers-color-scheme: dark) {
@@ -902,8 +902,8 @@ a { color: var(--link); }
 </style>
 </head>
 <body>
-<h1>arXiv cs.CV 論文一覧</h1>
-<p>実行日ごとの収集結果です。リンク先の表で絞り込みと並べ替えができます。</p>
+<h1>Computer Vision &amp; Pattern Recognition 論文一覧</h1>
+<p>実行日ごとに直近7日間以内に投稿された論文を一覧化しています。リンク先の表で絞り込みと並べ替えができます。</p>
 __ITEMS__
 </body>
 </html>
