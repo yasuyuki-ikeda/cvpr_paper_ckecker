@@ -18,10 +18,21 @@ concurrency:
   group: collect-arxiv-cv
   cancel-in-progress: false
 
+env:
+  LLAMA_TAG: b12024  # llama.cpp release used to run the summary model
+  MODEL_URL: https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf
+
 jobs:
-  collect:
+  # 1. The paper list (minutes). The window ends 2 days before the run (Saturday
+  #    run -> previous Friday to Thursday), so every paper in it has already been
+  #    announced on arXiv; Friday/Saturday submissions fall into next week's window.
+  list:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 90
+    outputs:
+      start: ${{ steps.dates.outputs.start }}
+      end: ${{ steps.dates.outputs.end }}
+      run_date: ${{ steps.dates.outputs.run_date }}
     steps:
       - uses: actions/checkout@v7
 
@@ -33,19 +44,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # The window ends 2 days before the run (Saturday run -> previous Friday to
-      # Thursday), so every paper in it has already been announced on arXiv.
-      # Papers submitted on Friday/Saturday fall into next week's window.
-      - name: Collect papers
+      - name: Dates
+        id: dates
         env:
           TZ: Asia/Tokyo
           DAYS: ${{ github.event.inputs.days || '7' }}
         run: |
           END=$(date -d "2 days ago" +%F)
+          echo "end=$END" >> "$GITHUB_OUTPUT"
+          echo "start=$(date -d "$END -$((DAYS - 1)) days" +%F)" >> "$GITHUB_OUTPUT"
+          echo "run_date=$(date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Collect the paper list
+        run: |
           # arXiv's servers are sometimes overloaded for a while (429/503), even
           # after the script's own retries and fallback; try again later.
           for attempt in 1 2 3; do
-            if python -u collect_arxiv_cv.py --end "$END" --days "$DAYS"; then
+            if python -u collect_arxiv_cv.py --start "${{ steps.dates.outputs.start }}" \
+                 --end "${{ steps.dates.outputs.end }}" --save-papers papers.json; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
@@ -55,12 +71,95 @@ jobs:
           done
           exit 1
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: papers
+          path: papers.json
+
+  # 2. 【課題】【方法】【従来からの進化】 with Qwen3-4B on the runners' CPUs,
+  #    split over 6 runners (about 20 s per paper, so about an hour each).
+  summarize:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: papers
+
+      - name: Download llama.cpp and the model
+        run: |
+          mkdir -p "$RUNNER_TEMP/llama"
+          curl -sSL --retry 5 "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/llama"
+          SERVER=$(find "$RUNNER_TEMP/llama" -name llama-server -type f | head -1)
+          echo "SERVER=$SERVER" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$(dirname "$SERVER")" >> "$GITHUB_ENV"
+          curl -sSL --retry 5 -o "$RUNNER_TEMP/model.gguf" "$MODEL_URL"
+
+      - name: Summarize shard ${{ matrix.shard }}
+        run: |
+          python -u summarize.py --server "$SERVER" --model "$RUNNER_TEMP/model.gguf" \
+            --papers papers.json --shard ${{ matrix.shard }} --shards 6 \
+            --out "summaries-${{ matrix.shard }}.json"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: summaries-${{ matrix.shard }}
+          path: summaries-${{ matrix.shard }}.json
+
+  # 3. Translation, affiliations, viewpoints and the CSV / xlsx / HTML. Runs even
+  #    if a summary runner failed; those papers just get blank summaries.
+  build:
+    needs: [list, summarize]
+    if: ${{ !cancelled() && needs.list.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Build the CSV, xlsx and HTML
+        env:
+          START: ${{ needs.list.outputs.start }}
+          END: ${{ needs.list.outputs.end }}
+          RUN_DATE: ${{ needs.list.outputs.run_date }}
+        run: |
+          ls artifacts
+          python -u collect_arxiv_cv.py --start "$START" --end "$END" \
+            --papers artifacts/papers.json --summaries artifacts/summaries-*.json \
+            --output "result/$RUN_DATE/arxiv_csCV_${START}_to_${END}.csv"
+
       - name: Commit and push results
+        env:
+          RUN_DATE: ${{ needs.list.outputs.run_date }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Skip the commit when this run's CSV holds only the header row.
-          if [ "$(cat "result/$(TZ=Asia/Tokyo date +%F)"/*.csv 2>/dev/null | wc -l)" -le 1 ]; then
+          if [ "$(cat "result/$RUN_DATE"/*.csv 2>/dev/null | wc -l)" -le 1 ]; then
             echo "No papers were collected; nothing to commit."
             exit 0
           fi
@@ -69,6 +168,6 @@ jobs:
             echo "No new results to commit."
             exit 0
           fi
-          git commit -m "Add arXiv cs.CV results ($(TZ=Asia/Tokyo date +%F))"
+          git commit -m "Add arXiv cs.CV results ($RUN_DATE)"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"

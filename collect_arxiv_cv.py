@@ -82,19 +82,21 @@ AMBIGUOUS_COMPANIES = {
 HEADERS = [
     "発表日", "英文タイトル", "和訳タイトル", "著者の所属する企業名", "ソースコードの開示有無",
     "入力データ", "出力データ",
+    "課題", "方法", "従来からの進化",
     "物体検出・追跡", "画素単位セグメンテーション", "画像・動画編集", "画像・動画生成",
     "画像・動画から3D・深度", "3D物体検出・セグメンテーション", "3D生成・編集",
     "画像・動画・3Dからテキスト", "高速化・軽量化・学習効率化", "非RGBセンサー使用",
     "ロボット動作", "自動運転", "医療画像", "産業画像", "人物",
     "arXiv ID", "URL", "alphaXiv URL",
 ]
-LEAD_COLUMNS = 7  # 発表日 … 出力データ, before the ● columns
+LEAD_COLUMNS = 10  # 発表日 … 従来からの進化, before the ● columns
 VIEWPOINT_COUNT = 15  # the ● columns
 HTML_COLUMNS = LEAD_COLUMNS + VIEWPOINT_COUNT  # the HTML page hides the ID and URL columns
 # Group names shown above the column headers in the xlsx and HTML:
 # (name, first column index, number of columns).
 HEADER_GROUPS = [
     ("入出力データ", 5, 2),               # 入力データ, 出力データ
+    ("要約", 7, 3),                       # 課題, 方法, 従来からの進化
     ("タスク", LEAD_COLUMNS, 10),          # 観点①〜⑩
     ("アプリケーション", LEAD_COLUMNS + 10, 5),  # 観点⑪〜⑮
 ]
@@ -529,8 +531,8 @@ def classify(paper):
     ]
 
 
-#             発表日 英題 和訳 企業 コード 入力 出力  観点  ID  URL  alphaXiv
-XLSX_WIDTHS = [11, 60, 50, 24, 10, 22, 22] + [9] * VIEWPOINT_COUNT + [12, 32, 36]
+#             発表日 英題 和訳 企業 コード 入力 出力 課題 方法 進化  観点  ID  URL  alphaXiv
+XLSX_WIDTHS = [11, 60, 50, 24, 10, 22, 22, 50, 50, 50] + [9] * VIEWPOINT_COUNT + [12, 32, 36]
 
 
 def write_xlsx(rows, path):
@@ -622,7 +624,7 @@ td.c { text-align: center; white-space: nowrap; }
 td.nw { white-space: nowrap; }
 a { color: var(--link); }
 .w-title { min-width: 360px; } .w-ja { min-width: 280px; } .w-co { min-width: 140px; }
-.w-io { min-width: 130px; }
+.w-io { min-width: 130px; } .w-sum { min-width: 260px; }
 .w-flag { min-width: 64px; max-width: 80px; }
 </style>
 </head>
@@ -644,9 +646,10 @@ const {headers, groups, rows} = JSON.parse(document.getElementById("data").textC
 // Column kinds: date, text (free-text filter), company (one dropdown entry per
 // company; a cell can list several, joined by "; "), code, flag (●). Each row
 // carries one extra, hidden element at the end: the alphaXiv URL for the title.
-const kinds = ["date", "text", "text", "company", "code", "text", "text"]
-  .concat(Array(headers.length - 7).fill("flag"));
-const widths = {1: "w-title", 2: "w-ja", 3: "w-co", 5: "w-io", 6: "w-io"};
+const kinds = ["date", "text", "text", "company", "code", "text", "text", "text", "text", "text"]
+  .concat(Array(headers.length - 10).fill("flag"));
+const widths = {1: "w-title", 2: "w-ja", 3: "w-co", 5: "w-io", 6: "w-io",
+                7: "w-sum", 8: "w-sum", 9: "w-sum"};
 const ANY = "\u0000", SOME = "\u0001";  // "すべて" and "(企業あり)"
 const companiesOf = value => value ? value.split("; ") : [];
 const filters = [];
@@ -837,6 +840,21 @@ def write_index(result_dir):
         INDEX_TEMPLATE.replace("__ITEMS__", body), encoding="utf-8")
 
 
+SUMMARY_FIELDS = ("problem", "method", "advance")  # as written by summarize.py
+SUMMARY_NOT_STATED = "Not stated"
+
+
+def summary_cells(summary, ja):
+    """課題・方法・従来からの進化 in Japanese (English if untranslated); blank without a summary."""
+    if not summary:
+        return ["", "", ""]
+    cells = []
+    for field in SUMMARY_FIELDS:
+        text = summary.get(field, "")
+        cells.append("記載なし" if text == SUMMARY_NOT_STATED else (ja.get(text) or text))
+    return cells
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", type=parse_date, help="JST start date: YYYY-MM-DD")
@@ -852,6 +870,12 @@ def main():
                         help="Minimum seconds between arXiv HTML requests (default 3.0)")
     parser.add_argument("--index-only", action="store_true",
                         help="Only rebuild result/index.html from the existing results")
+    parser.add_argument("--save-papers", type=Path, metavar="JSON",
+                        help="Only collect the paper list and save it (input for summarize.py)")
+    parser.add_argument("--papers", type=Path, metavar="JSON",
+                        help="Use a paper list saved by --save-papers instead of asking arXiv")
+    parser.add_argument("--summaries", type=Path, nargs="*", default=[], metavar="JSON",
+                        help="Summaries written by summarize.py (課題・方法・従来からの進化)")
     args = parser.parse_args()
     if args.index_only:
         RESULT_DIR.mkdir(exist_ok=True)
@@ -868,12 +892,31 @@ def main():
     output = args.output or RESULT_DIR / str(run_date) / f"arxiv_csCV_{start}_to_{end}.csv"
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        papers = collect_entries(start, end)
-    except OSError as error:
-        parser.exit(1, f"arXiv request failed on both the API and OAI-PMH ({error}). "
-                       "If this is HTTP 429/503, wait several minutes and retry.\n")
+    if args.papers:
+        papers = json.load(args.papers.open(encoding="utf-8"))
+        for paper in papers:
+            paper["submitted"] = datetime.fromisoformat(paper["submitted"])
+    else:
+        try:
+            papers = collect_entries(start, end)
+        except OSError as error:
+            parser.exit(1, f"arXiv request failed on both the API and OAI-PMH ({error}). "
+                           "If this is HTTP 429/503, wait several minutes and retry.\n")
     print(f"Found {len(papers)} cs.CV papers from {start} through {end} (JST).")
+    if args.save_papers:
+        json.dump([{**paper, "submitted": paper["submitted"].isoformat()} for paper in papers],
+                  args.save_papers.open("w", encoding="utf-8"), ensure_ascii=False)
+        print(f"Saved the paper list to {args.save_papers.resolve()}")
+        return
+
+    summaries = {}
+    for path in args.summaries:
+        summaries.update(json.load(path.open(encoding="utf-8")))
+    if summaries:
+        print(f"Loaded summaries for {sum(p['id'] in summaries for p in papers)}/{len(papers)} papers.")
+    summary_texts = {text for summary in summaries.values() for text in summary.values()
+                     if text and text != SUMMARY_NOT_STATED}
+    ja_summary = {}
     if args.no_translate:
         for paper in papers:
             paper["ja_title"] = ""
@@ -882,6 +925,8 @@ def main():
             translations = {pool.submit(translate, p["title"]): p for p in papers}
             for future in as_completed(translations):
                 translations[future]["ja_title"] = future.result()
+            texts = sorted(summary_texts)
+            ja_summary = dict(zip(texts, pool.map(translate, texts)))
     # arXiv asks for a single connection at a time, so fetch HTML pages sequentially.
     html_pages = {}
     for number, paper in enumerate(papers, 1):
@@ -897,6 +942,7 @@ def main():
             companies_from_html(html_pages[paper["id"]]),
             code_status(paper["summary"]),
             *data_io(paper),
+            *summary_cells(summaries.get(paper["id"]), ja_summary),
             *classify(paper),
             paper["id"],
             f"https://arxiv.org/abs/{paper['id']}",
