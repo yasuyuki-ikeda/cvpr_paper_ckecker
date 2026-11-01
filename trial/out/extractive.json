@@ -1,0 +1,166 @@
+{
+ "model": "extractive",
+ "lang": "en",
+ "results": [
+  {
+   "id": "2610.30390",
+   "summary": {
+    "problem": "Adding control to video generation often requires training, which demands additional computational resources, data, or architectural changes.",
+    "method": "We propose a training-free approach that utilizes pretrained video diffusion models to control object layout and motion using coarse layouts.",
+    "advance": "Extensive experiments show that our method consistently outperforms prior work in overlap and trajectory accuracy, as well as visual quality across static, dynamic, and multi-object scene settings."
+   }
+  },
+  {
+   "id": "2610.31205",
+   "summary": {
+    "problem": "Whether MLLMs can visually ground clinical findings in retinal optical coherence tomography (OCT), the most widely used imaging modality in ophthalmology, remains largely unexplored.",
+    "method": "To address this gap, we introduce RetinaGroundBench, the first benchmark for biomarker visual grounding in retinal OCT.",
+    "advance": "Across 27 open-source MLLMs (0.8-38B parameters), we find that visual grounding remains largely unsolved: the best general-purpose model achieves a macro F1 of just 23.7%, with consistently low recall, despite reaching up to 73% balanced accuracy on biomarker presence questions."
+   }
+  },
+  {
+   "id": "2610.31320",
+   "summary": {
+    "problem": "4D scene reconstruction requires robust handling of dynamic objects, yet existing streaming methods commonly assume static scenes, leading to pose drift and ghosting artifacts over long sequences.",
+    "method": "We introduce Stream4D, a training-free, motion-decoupled streaming reconstruction framework that can be directly integrated into causal Transformer backbones (e.g., StreamVGGT, Stream3R).",
+    "advance": "On diverse dynamic-scene benchmarks, Stream4D significantly improves camera pose estimation and static-scene reconstruction quality, yields reliable dynamic masks, and effectively mitigates long-sequence ghosting."
+   }
+  },
+  {
+   "id": "2610.30097",
+   "summary": {
+    "problem": "However, existing VLA-RL methods typically suffer from delayed and biased credit assignment due to trajectory-level sparse rewards, while imbalanced subtask mastery creates bottlenecks that limit overall performance.",
+    "method": "To address these challenges, we propose AtomicRL, an RL post-training framework that leverages atomic task structures for reliable credit assignment and adaptive exploration.",
+    "advance": "On LIBERO-LONG, AtomicRL achieves absolute performance gains of 3.6% and 4.0% over PPO across two VLA architectures."
+   }
+  },
+  {
+   "id": "2610.30966",
+   "summary": {
+    "problem": "Existing trit-plane codecs mainly treat decoded trits as discrete symbols for probability prediction, without fully exploiting their role as interval constraints on the underlying continuous latents.",
+    "method": "We propose bound-conditioned latent inference (BLI), a framework that reformulates progressive trit-plane coding as sequential latent inference under shrinking interval constraints.",
+    "advance": "Experiments on Kodak, CLIC, and JPEG-AI show that BLI achieves state-of-the-art rate-distortion performance among progressive image codecs, reducing BD-rate by $17.78\\%$ over DPICT and by $7.96\\%$ over CTC on Kodak, while replacing CTC's plane-specific predictors with a shared model that uses about $5.3\\times$ fewer parameters and achieves lower latency than CTC."
+   }
+  },
+  {
+   "id": "2610.31039",
+   "summary": {
+    "problem": "Besides, most of these methods perform denoising in latent space rather than directly in pixel domain.",
+    "method": "In this paper, we propose ResGVC, a residual coding framework for GVC that guides denoising toward original pictures by transmitting residual signals.",
+    "advance": "Experimental results show that, compared with the previous state-of-the-art method, ResGVC achieves 63.7% and 83.8% BD-rate reductions in terms of LPIPS and PSNR, respectively, while also delivering superior visual quality."
+   }
+  },
+  {
+   "id": "2610.31108",
+   "summary": {
+    "problem": "While functional magnetic resonance imaging (fMRI) decoders reconstruct images and 3D objects, recovering the metric geometry of rooms from a moving viewpoint remains an open challenge.",
+    "method": "We introduce, to our knowledge for the first time, the task of reconstructing 3D layouts of held-out scenes using only the known camera trajectories and the fMRI signals of participants watching indoor walkthroughs, without any visual frames.",
+    "advance": "On ten held-out scenes (20 participants), DRAFT reaches a layout r of 0.480, outperforming the camera path alone (0.446) and seven fMRI decoders (at most 0.429)."
+   }
+  },
+  {
+   "id": "2610.31166",
+   "summary": {
+    "problem": "Humanoid loco-manipulation in dynamic scenes is non-Markovian: cues vanish as objects change or are hidden, or leave the view as the robot turns and walks, yet whole-body vision-language-action (VLA) policies see only the present.",
+    "method": "We present WholeBodyMem, an object-guided perceptual memory that keeps the pre-history of object events seen before the robot acts on its goal.",
+    "advance": "Keeping the right frames rather than more frames, WholeBodyMem surpasses memoryless and uniform-memory baselines, raising its base policy's success from 29.1% to 72.6% in simulation and from 36.7% to 88.3% on the real robot, while also improving the standard SIMPLE tasks (70.2% to 86.9%)."
+   }
+  },
+  {
+   "id": "2610.31209",
+   "summary": {
+    "problem": "Moreover, such instance-level predictions can produce masks even when no part of the instance is actually moving, revealing a more fundamental issue: motion is not an intrinsic property of an instance; it can only be determined by comparing at least two frames.",
+    "method": "Building on this premise, we introduce MoRSe, which jointly interprets two frames to predict a moving-region mask, distinguishing actual scene motion from apparent motion induced by the camera.",
+    "advance": "MoRSe outperforms both specialized moving object segmentation methods and dense 4D reconstruction methods with motion-thresholded predictions, while producing the fewest false positives on sequences where nothing moves."
+   }
+  },
+  {
+   "id": "2610.30320",
+   "summary": {
+    "problem": "A recent line of WAMs improves inference efficiency by conditioning a separate action decoder on intermediate future video representations extracted from a single denoising step, avoiding costly iterative denoising required for video generation.",
+    "method": "In this paper, we introduce Future REpresentation learning via self-Distillation with temporal context (FRED), a framework that trains WAMs to improve the quality of future video representations from noise in a single denoising step.",
+    "advance": "It achieves particularly large gains on long-horizon and out-of-domain tasks under zero-shot environment generalization, and substantially improves human-to-robot skill transfer, reaching 50.0% task success on tasks absent from robot training data and demonstrated only in human videos, compared with 19.4% for the best competing WAM."
+   }
+  },
+  {
+   "id": "2610.30646",
+   "summary": {
+    "problem": "However, existing FUDA methods typically require multiple communication rounds, rely on complex aggregation strategies, and often struggle with noisy pseudo labels and inconsistent source knowledge.",
+    "method": "To address these challenges, we propose SKD-ETR, a novel one-shot FUDA framework that combines Smoothed Knowledge Distillation (SKD) and Exponential moving average-based Teacher Refinement (ETR).",
+    "advance": "This reduces overconfidence, mitigates noise, and improves robustness."
+   }
+  },
+  {
+   "id": "2610.35357",
+   "summary": {
+    "problem": "",
+    "method": "",
+    "advance": ""
+   }
+  },
+  {
+   "id": "2610.30609",
+   "summary": {
+    "problem": "However, existing methods do not explicitly incorporate kinodynamic modeling or safety distances into trajectory generation, resulting in high absolute yaw rates, frequent collisions, and low navigation success rates, which limit safety and motion stability.",
+    "method": "To address this challenge, we introduce KinoUAV, a kinodynamic benchmark comprising a dataset and KinoUAV-Agent.",
+    "advance": "It uses waypoint chains from global planning and generates trajectories segment by segment under velocity, acceleration, and jerk constraints, reducing oscillations and improving trajectory stability."
+   }
+  },
+  {
+   "id": "2610.30814",
+   "summary": {
+    "problem": "We show that this mismatch is substantial: lower pixel MSE can produce worse policy gradients, and a world model trained for policy utility can yield better downstream policies despite 17% higher pixel MSE on the next frame.",
+    "method": "We propose the Downstream-Return Imagination Learning Loop (DRILL), a bilevel framework that updates the world model to maximize the policy's return after an inner GRPO update on imagined rollouts.",
+    "advance": ""
+   }
+  },
+  {
+   "id": "2610.31304",
+   "summary": {
+    "problem": "Despite the increasing importance of data, the academic community still lacks a systematic, data-centric survey to guide researchers in constructing high-quality RS vision-language datasets for various application scenarios and in conducting effective model fine-tuning and performance evaluation based on these datasets.",
+    "method": "To address this gap, this paper presents a systematic review of the development status of RS datasets tailored for VLMs.",
+    "advance": ""
+   }
+  },
+  {
+   "id": "2610.31111",
+   "summary": {
+    "problem": "We therefore argue that long-form captioning should be studied not only by what facts are mentioned, but also by where they appear.",
+    "method": "We introduce a position-aware rubric representation that decomposes dense human references into atomic visual claims, verifies generated captions against those claims, and induces a quartile-wise composition of supported, hallucinated, and generic content.",
+    "advance": "Experiments on detailed-caption benchmarks show that PAGER improves position-wise grounding and pairwise caption preference while preserving competitive global caption quality."
+   }
+  },
+  {
+   "id": "2610.31087",
+   "summary": {
+    "problem": "However, many fusion methods integrate modality-specific representations and cross-modal interactions into joint representations, making it difficult to determine whether predictive utility arises from a modality itself or from its interactions with others.",
+    "method": "To address this issue, we propose I$^2$-KAN, an interpretable multi-pathway framework that explicitly maintains intra-modal and pairwise inter-modal information in separate structural pathways.",
+    "advance": ""
+   }
+  },
+  {
+   "id": "2610.30691",
+   "summary": {
+    "problem": "We ask whether LoRAs trained independently for the same task on different pretrained backbones can be summed and applied unchanged to all contributing backbones.",
+    "method": "We call this construction LoRA superposition.",
+    "advance": "Across seven ViT-B/16 CLIP backbones and eight image-classification tasks, the exact sum improves all 56 backbone-task pairs and achieves a mean accuracy gain of 30.21 percentage points over the unadapted backbone."
+   }
+  },
+  {
+   "id": "2610.30519",
+   "summary": {
+    "problem": "",
+    "method": "",
+    "advance": ""
+   }
+  },
+  {
+   "id": "2610.30639",
+   "summary": {
+    "problem": "Self-supervised Vision Transformers learn strong image-level representations, but their patch-level representations can be unreliable for dense prediction.",
+    "method": "To provide masked patches with global semantics without changing the architecture, we propose Cross Distillation (CODI), which mixes a small amount of the teacher class-token distribution into each teacher patch-token target.",
+    "advance": "Experiments on dense and image-level benchmarks show that CODI improves both dense and image-level performance under aligned pretraining settings."
+   }
+  }
+ ]
+}

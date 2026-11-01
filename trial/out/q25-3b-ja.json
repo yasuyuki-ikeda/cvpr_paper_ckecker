@@ -1,0 +1,229 @@
+{
+ "model": "q25-3b.gguf",
+ "lang": "ja",
+ "threads": 4,
+ "load_sec": 3.0,
+ "sec_per_paper": 16.6,
+ "results": [
+  {
+   "id": "2610.30390",
+   "summary": {
+    "problem": "既存手法は訓練が必要で資源を消費する。",
+    "method": "予測済み動画差分モデルを用いて、粗いレイアウトと動きを制御する。",
+    "advance": "強力な時系列的一貫性と多様な軌跡をサポートする。"
+   },
+   "sec": 13.5,
+   "prompt_tokens": 297,
+   "completion_tokens": 76
+  },
+  {
+   "id": "2610.31205",
+   "summary": {
+    "problem": "既存のMLLMsは医療画像の臨床的な質問に答える能力があるが、信頼性の高い使用には視覚的な地図が必要。Retinal OCTの視覚的な地図の地図化が不十分である。",
+    "method": "RetinaGroundBenchを導入し、AggIoUを提案して視覚的な地図を評価。",
+    "advance": "RetGrounderを用いて視覚的な地図の精度を改善。"
+   },
+   "sec": 18.5,
+   "prompt_tokens": 482,
+   "completion_tokens": 123
+  },
+  {
+   "id": "2610.31320",
+   "summary": {
+    "problem": "動的なオブジェクトの処理が困難な4Dシーン再構築を処理する既存手法は、静的なシーンを仮定することが多い。これにより、長期間の序列でポーズのズレと幽霊化のアートifactsが発生する。",
+    "method": "因果Transformerバックボーン（例：StreamVGGT、Stream3R）に直接統合可能な訓練不要のモーション脱却型ストリーミング再構築フレームワークStream4Dを提案。",
+    "advance": "因果注視がKVキャッシュに含まれる豊富な時系列のモーションの cuesを暗黙に含む。これらの cuesを複数の注視層と時間ウィンドウ間で適応的に集約し、深度のプライオリズムと融合することで、遮蔽やテキストレスの領域などの困難なケースを処理する。"
+   },
+   "sec": 23.0,
+   "prompt_tokens": 385,
+   "completion_tokens": 217
+  },
+  {
+   "id": "2610.30097",
+   "summary": {
+    "problem": "VLAモデルがロボット操作で複雑な長期視野スキルを習得に苦戦する課題",
+    "method": "AtomicRL: アトミックなタスク構造を用いた信用分配と探索の適応化",
+    "advance": "遅延と偏った信用分配、制約されたサブタスク masteryによるパフォーマンス制限の解消"
+   },
+   "sec": 18.0,
+   "prompt_tokens": 500,
+   "completion_tokens": 101
+  },
+  {
+   "id": "2610.30966",
+   "summary": {
+    "problem": "既存手法はデジタルビットストリームから画像を順次復元するプロ progressives画像圧縮で、部分的な観測下での順次潜在変数推論を扱う。",
+    "method": "BLIは、縮小された区間制約下での順次潜在変数推論のフレームワークで、デジタルビットストリームから画像を順次復元するプロ progressives画像圧縮を提案する。",
+    "advance": "潜在変数の役割を完全に利用し、区間制約を縮小する順次潜在変数推論を行う。"
+   },
+   "sec": 19.4,
+   "prompt_tokens": 432,
+   "completion_tokens": 148
+  },
+  {
+   "id": "2610.31039",
+   "summary": {
+    "problem": "GVCの既存手法は解像度の高い動画圧縮に課題を抱えている。",
+    "method": "ResGVCは解像度の高い動画圧縮に向けたリマインダーコーディングフレームワークを提案。",
+    "advance": "解像度の高い動画圧縮に向けたリマインダーコーディングフレームワークを提案。"
+   },
+   "sec": 18.0,
+   "prompt_tokens": 421,
+   "completion_tokens": 106
+  },
+  {
+   "id": "2610.31108",
+   "summary": {
+    "problem": "fMRI信号とカメラの動径だけから3D室の配置を再構築する課題",
+    "method": "DRAFT: fMRIとカメラの動径から3D室の配置を抽出・融合",
+    "advance": "従来の手法と比較して大幅に性能向上"
+   },
+   "sec": 14.9,
+   "prompt_tokens": 465,
+   "completion_tokens": 76
+  },
+  {
+   "id": "2610.31166",
+   "summary": {
+    "problem": "非マーカルの状況でロボットが目標を達成するための非一貫性を克服する課題",
+    "method": "WholeBodyMem: 事前歴の物体イベントを記憶する物体指向の感知記憶",
+    "advance": "記憶したフレームの選択により、基準の成功率を大幅に向上"
+   },
+   "sec": 13.3,
+   "prompt_tokens": 387,
+   "completion_tokens": 91
+  },
+  {
+   "id": "2610.31209",
+   "summary": {
+    "problem": "既存手法は全体のオブジェクトを動くとみなすため、動く部分が特定されず、カメラの動かしによる誤った動きも検出される問題",
+    "method": "MoRSeは2フレームを同時に解釈し、実際に動く部分を動く領域として予測する",
+    "advance": "インスタンスレベルの予測から解放され、静止部分も正確に識別できる"
+   },
+   "sec": 16.2,
+   "prompt_tokens": 432,
+   "completion_tokens": 108
+  },
+  {
+   "id": "2610.30320",
+   "summary": {
+    "problem": "WAMsの予測精度が課題",
+    "method": "FRED:未来視覚表現の質を改善する自ディストリビューション学習",
+    "advance": "単一の去ノイズステップで未来視覚表現の品質を向上"
+   },
+   "sec": 14.5,
+   "prompt_tokens": 423,
+   "completion_tokens": 71
+  },
+  {
+   "id": "2610.30646",
+   "summary": {
+    "problem": "複数の通信ラウンドと複雑な aggregation 策略による課題",
+    "method": "SKD-ETR: SKDとETRの組み合わせによる1ラウンドFUDA",
+    "advance": "シンプルな初始化と1ラウンドの知識伝送"
+   },
+   "sec": 13.9,
+   "prompt_tokens": 431,
+   "completion_tokens": 75
+  },
+  {
+   "id": "2610.35357",
+   "summary": {
+    "problem": "aggregate overlap scoresの限界で、構造的信頼性や跨データセットの堅牢性、アプリケーション固有のエラーコストを無視している。",
+    "method": "5つの実行可能な二値血管分割パイプラインを6つの公開データセットから評価し、ピクセルレベルの合致、跨データセットの安定性、細血管の保持、構造指標、エラー構成、可用なコンピュータービジネスを用いた。",
+    "advance": "跨データセットの安定性と構造指標の評価により、選択したパイプラインの性能を改善。"
+   },
+   "sec": 21.3,
+   "prompt_tokens": 498,
+   "completion_tokens": 154
+  },
+  {
+   "id": "2610.30609",
+   "summary": {
+    "problem": "既存手法は安全距離やダイナミックモデルを含まないため、高 yaw レート、頻繁な衝突、低 Navigation 成功率が問題",
+    "method": "ダイナミックモデルを含む階層的なダイナミックトラジェクトリーゲネレーティングパイプラインを導入",
+    "advance": "安全な行動を生成するための感知と行動決定の分離により、自動的な障害物回避と Navigation 安全性の改善"
+   },
+   "sec": 17.7,
+   "prompt_tokens": 457,
+   "completion_tokens": 122
+  },
+  {
+   "id": "2610.30814",
+   "summary": {
+    "problem": "既存手法では世界モデルが像素を予測するための訓練しか行われず、政策の改善に適していない。",
+    "method": "DRILL: ワールドモデルを政策の学習に合わせて更新する二層フレームワークを提案。",
+    "advance": "政策の学習に適した世界モデルの訓練が可能になる。"
+   },
+   "sec": 16.6,
+   "prompt_tokens": 486,
+   "completion_tokens": 86
+  },
+  {
+   "id": "2610.31304",
+   "summary": {
+    "problem": "RS visionモデルの最適化と大規模な計算リソースの制約で、VLMsを用いたRSデータの微調整に焦点を当てている。",
+    "method": "RSデータに基づいた一般的なVLMsの微調整と性能評価のための手順を提供。",
+    "advance": "データ中心の視野にシフトし、RS研究者のためのデータセットの構築と評価のためのガイドラインを提供。"
+   },
+   "sec": 16.1,
+   "prompt_tokens": 421,
+   "completion_tokens": 112
+  },
+  {
+   "id": "2610.31111",
+   "summary": {
+    "problem": "長 Caption 生成の誤りを特定し、位置情報に基づいて改善する",
+    "method": "位置情報に基づいた rubric 表現と GRPO パラメータを用いた学習",
+    "advance": "長 Caption の中間部分の誤りと尾部の不確実性を改善"
+   },
+   "sec": 14.8,
+   "prompt_tokens": 452,
+   "completion_tokens": 79
+  },
+  {
+   "id": "2610.31087",
+   "summary": {
+    "problem": "融合手法による情報統合が模様の独自表現と跨模態相互作用を組み込んだ共通表現にし、模様の独自有用性を特定するのが困難である。",
+    "method": "I$^2$-KANは模様間の相互作用を明示的に保持するマルチパスフレームワークで、独自の模様と跨模態の相互作用を別々の構造パスで維持する。",
+    "advance": "跨模態相互作用による有用性の評価から模様の独自有用性を評価する方法の進化"
+   },
+   "sec": 19.7,
+   "prompt_tokens": 448,
+   "completion_tokens": 137
+  },
+  {
+   "id": "2610.30691",
+   "summary": {
+    "problem": "LoRAの既存手法は、学習が行われたプリセットバックボーンに固有に依存する。異なるプリセットバックボーンで独立に学習したLoRAを、すべてのバックボーンに適用する方法の検討。",
+    "method": "異なるプリセットバックボーンで独立に学習したLoRAを、すべてのバックボーンに適用するLoRA超positionの提案。",
+    "advance": "プリセットバックボーン間のLoRAの組み合わせによる全体的な精度の向上。独自学習のLoRAとほぼ同等の精度を達成。"
+   },
+   "sec": 16.5,
+   "prompt_tokens": 375,
+   "completion_tokens": 141
+  },
+  {
+   "id": "2610.30519",
+   "summary": {
+    "problem": "複数の相互作用するプレイヤーが複雑な社会的ダイナミクスを生むチームスポーツで、動径と3Dボディポーズの関連性を解釈する課題",
+    "method": "動径とポーズを融合し、共通の因子化注意を介してモデル化するサocio-テンポラルエンコーダーを採用",
+    "advance": "動径予測精度の改善とポーズ予測の効果的な補完"
+   },
+   "sec": 14.5,
+   "prompt_tokens": 346,
+   "completion_tokens": 123
+  },
+  {
+   "id": "2610.30639",
+   "summary": {
+    "problem": "patch-level representationsの信頼性が低いため、密集予測に適さない。",
+    "method": "Cross Distillation (CODI)を提案。教師のclass token分布を教師のpatch tokenターゲットに混ぜる。",
+    "advance": "patch-level representationsの信頼性を向上させ、密度予測と画像レベルの予測性能を改善。"
+   },
+   "sec": 12.4,
+   "prompt_tokens": 346,
+   "completion_tokens": 93
+  }
+ ]
+}

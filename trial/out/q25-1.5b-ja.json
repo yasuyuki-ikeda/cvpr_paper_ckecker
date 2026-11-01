@@ -1,0 +1,229 @@
+{
+ "model": "q25-1.5b.gguf",
+ "lang": "ja",
+ "threads": 4,
+ "load_sec": 2.0,
+ "sec_per_paper": 7.9,
+ "results": [
+  {
+   "id": "2610.30390",
+   "summary": {
+    "problem": "视频生成中控制物体布局和运动需要额外的计算资源、数据或架构变化",
+    "method": "提出一个无需训练的方法，利用预训练的视频扩散模型控制物体布局和运动",
+    "advance": "无需额外训练，通过粗布局引导生成粗视觉指南，再使用该指南条件生成高质量、布局一致的视频"
+   },
+   "sec": 6.9,
+   "prompt_tokens": 297,
+   "completion_tokens": 86
+  },
+  {
+   "id": "2610.31205",
+   "summary": {
+    "problem": "临床问题的视觉定位",
+    "method": "多模态大型语言模型（MLLM）",
+    "advance": "视觉定位仍不成熟"
+   },
+   "sec": 6.4,
+   "prompt_tokens": 482,
+   "completion_tokens": 45
+  },
+  {
+   "id": "2610.31320",
+   "summary": {
+    "problem": "4D scene reconstruction requires robust handling of dynamic objects, but existing methods assume static scenes, leading to pose drift and ghosting artifacts.",
+    "method": "Stream4D is a training-free, motion-decoupled streaming reconstruction framework that decouples static and dynamic regions.",
+    "advance": "It uses causal KV-cache attention to implicitly encode rich temporal motion cues, improving accuracy and compatibility with existing architectures."
+   },
+   "sec": 6.7,
+   "prompt_tokens": 385,
+   "completion_tokens": 94
+  },
+  {
+   "id": "2610.30097",
+   "summary": {
+    "problem": "Imitation learning struggles with mastering complex long-horizon skills.",
+    "method": "Reinforcement learning (RL) offers an effective avenue for improving VLA policies.",
+    "advance": "AtomicRL leverages atomic task structures for reliable credit assignment and adaptive exploration."
+   },
+   "sec": 7.5,
+   "prompt_tokens": 500,
+   "completion_tokens": 67
+  },
+  {
+   "id": "2610.30966",
+   "summary": {
+    "problem": "Progressive image compression reconstructs images from prefixes of a single bitstream, involving sequential latent inference under partial observations.",
+    "method": "Proposed bound-conditioned latent inference (BLI) reformulates progressive trit-plane coding as sequential latent inference under shrinking interval constraints.",
+    "advance": "BLI uses bounds on latent elements to refine Gaussian parameters and latent estimates, enabling flexible in-plane refinement schedules and reducing BD-rate by 17.78% over DPICT and 7.96% over CTC."
+   },
+   "sec": 8.3,
+   "prompt_tokens": 432,
+   "completion_tokens": 119
+  },
+  {
+   "id": "2610.31039",
+   "summary": {
+    "problem": "Generative video compression methods often use decoder-side diffusion models to denoise reconstructed signals based on generative priors, but most perform denoising in latent space rather than directly in pixel domain.",
+    "method": "ResGVC is a residual coding framework for GVC that guides denoising toward original pictures by transmitting residual signals.",
+    "advance": "ResGVC introduces explicit source constraints throughout denoising rather than relying on decoder-side generation alone, enabling more effective distribution modeling based on powerful generative priors."
+   },
+   "sec": 8.1,
+   "prompt_tokens": 421,
+   "completion_tokens": 118
+  },
+  {
+   "id": "2610.31108",
+   "summary": {
+    "problem": "recovering the metric geometry of rooms from a moving viewpoint",
+    "method": "DRAFT (Decoding and Reconstructing 3D room layouts from fMRI and Trajectories)",
+    "advance": "improves fMRI decoders without retraining"
+   },
+   "sec": 6.9,
+   "prompt_tokens": 465,
+   "completion_tokens": 66
+  },
+  {
+   "id": "2610.31166",
+   "summary": {
+    "problem": "Humanoid loco-manipulation in dynamic scenes is non-Markovian due to object events changing or being hidden.",
+    "method": "WholeBodyMem, an object-guided perceptual memory, keeps the pre-history of object events.",
+    "advance": "WholeBodyMem surpasses memoryless and uniform-memory baselines in simulation and real robot tasks."
+   },
+   "sec": 7.1,
+   "prompt_tokens": 387,
+   "completion_tokens": 86
+  },
+  {
+   "id": "2610.31209",
+   "summary": {
+    "problem": "Moving object segmentation is conventionally formulated at the sequence and object level, marking an entire instance as moving once it moves anywhere in a video.",
+    "method": "Jointly interpreting two frames to predict a moving-region mask.",
+    "advance": "Improves the ability to distinguish and localize moving and stationary regions under different camera and scene motion conditions."
+   },
+   "sec": 7.0,
+   "prompt_tokens": 432,
+   "completion_tokens": 82
+  },
+  {
+   "id": "2610.30320",
+   "summary": {
+    "problem": "Existing methods for inference efficiency in WAMs require costly iterative denoising for video generation.",
+    "method": "FRED (Future Representation learning via self-Distillation with temporal context) trains WAMs to improve future video representation quality from noise in a single denoising step.",
+    "advance": "FRED uses self-distillation to predict future representations from noise, using ground-truth future observations as targets, and provides temporal context for better prediction."
+   },
+   "sec": 7.7,
+   "prompt_tokens": 423,
+   "completion_tokens": 106
+  },
+  {
+   "id": "2610.30646",
+   "summary": {
+    "problem": "Adapting models to an unlabeled target domain using decentralized source domains while preserving data privacy",
+    "method": "Combining Smoothed Knowledge Distillation (SKD) and Exponential moving average-based Teacher Refinement (ETR)",
+    "advance": "One-shot FUDA framework that reduces overconfidence, mitigates noise, and improves robustness"
+   },
+   "sec": 7.1,
+   "prompt_tokens": 431,
+   "completion_tokens": 84
+  },
+  {
+   "id": "2610.35357",
+   "summary": {
+    "problem": "模型选择基于仅基于聚合重叠分数的模型选择忽略结构忠实度、跨数据集稳健性和应用特定错误成本。",
+    "method": "评估五种可执行的二元血管分割管道（FSG-Net、SA-UNetv2、DCP-1024、GAVE、FR-UNet）在六个公共数据集上的244张图像，使用像素级一致性、跨数据集稳定性、细血管保留、结构指标、错误组成和可用计算证据。",
+    "advance": "结果被加权平均，没有管道在所有设置中都是最优的。FSG-Net在每个数据集上的平均Macro-F1（0.77）、IoU（0.63）、clDice（0.83）和Skeleton F1（0.78）最高，而SA-UNetv2在平均敏感性（0.85）和细血管敏感性（0.63）上最高。不同数据集之间的差异往往大于领先管道之间的差异，所有五种方法的错误都集中在标注血管边界和微弱的外围血管附近。在45张HRF图像上，将分割掩码转换为11个环状血管特征，进行留一分类。控制扰动显示局部掩码错误在下游特征中可以放大，而靶向稳定减少了五个特征的敏感性。结果支持任务条件化的基准相对管道选择，而不是单个通用排名，强调了选择的管道在预期目标域上验证的需要。"
+   },
+   "sec": 17.1,
+   "prompt_tokens": 498,
+   "completion_tokens": 335
+  },
+  {
+   "id": "2610.30609",
+   "summary": {
+    "problem": "Existing methods do not incorporate kinodynamic modeling or safety distances into trajectory generation, leading to high absolute yaw rates, frequent collisions, and low navigation success rates.",
+    "method": "Introduce KinoUAV, a kinodynamic benchmark with a hierarchical trajectory generation pipeline and directional free-space distance labels.",
+    "advance": "KinoUAV-Agent decouples perception from action decision-making, enabling autonomous obstacle avoidance and improved navigation safety."
+   },
+   "sec": 7.9,
+   "prompt_tokens": 457,
+   "completion_tokens": 99
+  },
+  {
+   "id": "2610.30814",
+   "summary": {
+    "problem": "World models are trained to predict pixels, but their role is to improve policies rather than just render visually faithful videos.",
+    "method": "DRILL is a bilevel framework that updates the world model to maximize the policy's return after an inner GRPO update on imagined rollouts.",
+    "advance": "DRILL-VWI is a closed-form surrogate that reweights prediction errors by policy visitation and meta-gradient, while DRILL-IMG is a full meta-gradient method that differentiates through the inner update using truncated Hessian-vector products."
+   },
+   "sec": 10.4,
+   "prompt_tokens": 486,
+   "completion_tokens": 121
+  },
+  {
+   "id": "2610.31304",
+   "summary": {
+    "problem": "缺乏系统的数据驱动的遥感图像-语言模型的遥感数据集的全面调查",
+    "method": "将遥感垂直领域数据用于VLMs的通用模型适应",
+    "advance": "数据驱动的遥感数据集的系统性审查"
+   },
+   "sec": 6.5,
+   "prompt_tokens": 421,
+   "completion_tokens": 69
+  },
+  {
+   "id": "2610.31111",
+   "summary": {
+    "problem": "Long captions often fail to provide specific details and maintain visual grounding.",
+    "method": "Position-aware diagnosis and reinforcement learning for detailed image captioning.",
+    "advance": "Improves position-wise grounding and pairwise caption preference while preserving global caption quality."
+   },
+   "sec": 6.6,
+   "prompt_tokens": 452,
+   "completion_tokens": 62
+  },
+  {
+   "id": "2610.31087",
+   "summary": {
+    "problem": "Multimodal sentiment analysis (MSA) is challenging due to the difficulty in distinguishing predictive utility from modality-specific representations and interactions.",
+    "method": "I$^2$-KAN proposes an interpretable multi-pathway framework that maintains intra-modal and pairwise inter-modal information.",
+    "advance": "I$^2$-KAN explicitly separates intra-modal and pairwise inter-modal information, enabling more accurate representation learning and multi-level interpretation."
+   },
+   "sec": 8.0,
+   "prompt_tokens": 448,
+   "completion_tokens": 103
+  },
+  {
+   "id": "2610.30691",
+   "summary": {
+    "problem": "LoRA训练独立的模型在相同任务上，能否将这些模型的LoRA进行叠加，不改变其应用。",
+    "method": "LoRA超叠",
+    "advance": "在七种ViT-B/16 CLIP预训练模型和八种图像分类任务上，精确叠加的LoRA在所有56对模型-任务对中都实现了56%的准确度提升，优于单独训练的LoRA。精确叠加的LoRA在平均准确度上仅落后于单独训练的LoRA0.28个百分点。与单独训练的LoRA相比，模型-模型交叉的精确叠加仅提高了0.06个百分点。模型-模型单独训练的LoRA在参数空间中几乎相互正交，而模型-模型交叉响应集中在对角线上。这些结果支持一个组件间不干扰的假设，即冻结的预训练模型作为其组件的隐式选择器，而无需显式路由或模型间的对齐。"
+   },
+   "sec": 11.1,
+   "prompt_tokens": 375,
+   "completion_tokens": 220
+  },
+  {
+   "id": "2610.30519",
+   "summary": {
+    "problem": "Forecasting future human motion requires reasoning about global trajectory and 3D body pose in team sports.",
+    "method": "Exploit a socio-temporal encoder to fuse trajectory and pose at the input level and model them jointly through shared factorized attention.",
+    "advance": "Enhanced with per-joint loss reweighting and frequency-domain trajectory smoothing to improve trajectory prediction and indirectly benefit pose forecasting."
+   },
+   "sec": 6.2,
+   "prompt_tokens": 346,
+   "completion_tokens": 93
+  },
+  {
+   "id": "2610.30639",
+   "summary": {
+    "problem": "Self-supervised Vision Transformers' patch-level representations can be unreliable for dense prediction.",
+    "method": "Cross Distillation (CODI) mixes a small amount of the teacher class-token distribution into each teacher patch-token target.",
+    "advance": "CODI provides global semantics to masked patches without changing the architecture."
+   },
+   "sec": 5.5,
+   "prompt_tokens": 346,
+   "completion_tokens": 75
+  }
+ ]
+}

@@ -1,0 +1,229 @@
+{
+ "model": "q25-1.5b.gguf",
+ "lang": "en",
+ "threads": 4,
+ "load_sec": 2.0,
+ "sec_per_paper": 8.2,
+ "results": [
+  {
+   "id": "2610.30390",
+   "summary": {
+    "problem": "Training-free approach to control object layout and motion in video synthesis",
+    "method": "Uses pretrained video diffusion models to steer spatiotemporal placement and generate layout-consistent videos",
+    "advance": "Improves over prior work by enabling coordinated motion with strong temporal consistency and supporting diverse trajectories and object interactions without additional training"
+   },
+   "sec": 8.4,
+   "prompt_tokens": 277,
+   "completion_tokens": 79
+  },
+  {
+   "id": "2610.31205",
+   "summary": {
+    "problem": "Visual grounding remains largely unsolved in retinal OCT diagnosis using multimodal large language models.",
+    "method": "RetinaGroundBench benchmark and RetGrounder fine-tuned model.",
+    "advance": "RetGrounder improves visual grounding F1 to 33.9%, a 43% relative improvement over general-purpose models."
+   },
+   "sec": 7.8,
+   "prompt_tokens": 462,
+   "completion_tokens": 84
+  },
+  {
+   "id": "2610.31320",
+   "summary": {
+    "problem": "4D scene reconstruction requires robust handling of dynamic objects, yet existing methods assume static scenes leading to pose drift and ghosting artifacts.",
+    "method": "Stream4D is a training-free, motion-decoupled streaming reconstruction framework that decouples static and dynamic regions using causal KV-cache attention.",
+    "advance": "Stream4D improves camera pose estimation accuracy and produces reliable dynamic masks, effectively mitigating long-sequence ghosting."
+   },
+   "sec": 6.9,
+   "prompt_tokens": 365,
+   "completion_tokens": 99
+  },
+  {
+   "id": "2610.30097",
+   "summary": {
+    "problem": "Imitation learning struggles to master complex long-horizon skills in vision-language-action (VLA) models.",
+    "method": "AtomicRL leverages atomic task structures for reliable credit assignment and adaptive exploration.",
+    "advance": "AtomicRL improves performance by 3.6% and 4.0% on LIBERO-LONG and CALVIN ABC-D, respectively, over PPO."
+   },
+   "sec": 8.3,
+   "prompt_tokens": 480,
+   "completion_tokens": 92
+  },
+  {
+   "id": "2610.30966",
+   "summary": {
+    "problem": "Progressive image compression reconstructs images from prefixes of a single bitstream and involves sequential latent inference under partial observations.",
+    "method": "Bound-conditioned Latent Inference (BLI) reformulates progressive trit-plane coding as sequential latent inference under shrinking interval constraints.",
+    "advance": "BLI uses the center and width of the bounds, together with hyperprior information, to refine Gaussian parameters and latent estimates, achieving state-of-the-art rate-distortion performance."
+   },
+   "sec": 8.2,
+   "prompt_tokens": 412,
+   "completion_tokens": 107
+  },
+  {
+   "id": "2610.31039",
+   "summary": {
+    "problem": "Generative video compression methods often rely on decoder-side diffusion models to denoise reconstructed signals, with most denoising performed in latent space rather than the pixel domain.",
+    "method": "ResGVC proposes a residual coding framework that guides denoising toward original pictures by transmitting residual signals.",
+    "advance": "ResGVC achieves 63.7% and 83.8% BD-rate reductions in terms of LPIPS and PSNR, respectively, while also delivering superior visual quality compared to the previous state-of-the-art method."
+   },
+   "sec": 8.4,
+   "prompt_tokens": 401,
+   "completion_tokens": 124
+  },
+  {
+   "id": "2610.31108",
+   "summary": {
+    "problem": "Reconstructing 3D layouts of held-out scenes using only the known camera trajectories and fMRI signals",
+    "method": "DRAFT (Decoding and Reconstructing 3D room lAyouts from fMRI and Trajectories)",
+    "advance": "Reaches a layout r of 0.480, outperforming the camera path alone (0.446) and seven fMRI decoders (at most 0.429)"
+   },
+   "sec": 8.5,
+   "prompt_tokens": 445,
+   "completion_tokens": 110
+  },
+  {
+   "id": "2610.31166",
+   "summary": {
+    "problem": "Humanoid loco-manipulation in dynamic scenes is non-Markovian due to the loss of cues and object events.",
+    "method": "WholeBodyMem, an object-guided perceptual memory, keeps the pre-history of object events.",
+    "advance": "WholeBodyMem surpasses memoryless and uniform-memory baselines, improving success rates in simulation and on the real robot."
+   },
+   "sec": 6.7,
+   "prompt_tokens": 367,
+   "completion_tokens": 92
+  },
+  {
+   "id": "2610.31209",
+   "summary": {
+    "problem": "Moving object segmentation is conventionally formulated at the sequence and object level, marking an entire instance as moving once it moves anywhere in a video.",
+    "method": "Jointly interpreting two frames to predict a moving-region mask, distinguishing actual scene motion from apparent motion induced by the camera.",
+    "advance": "MoRSe outperforms specialized moving object segmentation methods and dense 4D reconstruction methods with motion-thresholded predictions, while producing the fewest false positives on sequences where nothing moves."
+   },
+   "sec": 8.7,
+   "prompt_tokens": 412,
+   "completion_tokens": 112
+  },
+  {
+   "id": "2610.30320",
+   "summary": {
+    "problem": "Improving the quality of future video representations for World Action Models (WAMs) to enhance inference efficiency and generalization.",
+    "method": "FRED (Future REpresentation learning via self-Distillation with temporal context) trains WAMs to predict future representations from noise using ground-truth future observations.",
+    "advance": "FRED consistently outperforms competing WAMs across diverse real-world manipulation scenarios, achieving large gains on long-horizon and out-of-domain tasks under zero-shot environment generalization, and significantly improving human-to-robot skill transfer."
+   },
+   "sec": 8.5,
+   "prompt_tokens": 403,
+   "completion_tokens": 127
+  },
+  {
+   "id": "2610.30646",
+   "summary": {
+    "problem": "Federated unsupervised domain adaptation (FUDA) requires multiple communication rounds and complex aggregation strategies, leading to noisy pseudo labels and inconsistent source knowledge.",
+    "method": "SKD-ETR combines Smoothed Knowledge Distillation (SKD) and Exponential moving average-based Teacher Refinement (ETR) to train a student model on the target domain using smoothed soft pseudo labels generated by the ensemble of source models.",
+    "advance": "SKD-ETR eliminates complex aggregation by initializing the student model randomly and performing a single-round distillation process, achieving competitive performance while being communication- and computation-efficient."
+   },
+   "sec": 8.9,
+   "prompt_tokens": 411,
+   "completion_tokens": 137
+  },
+  {
+   "id": "2610.35357",
+   "summary": {
+    "problem": "Model selection based on aggregate overlap scores can overlook structural fidelity, cross-dataset robustness, and application-specific error costs.",
+    "method": "We evaluated five executable binary vessel-segmentation pipelines (FSG-Net, SA-UNetv2, DCP-1024, GAVE, and FR-UNet) on 244 images from six public datasets using pixel-level agreement, cross-dataset stability, thin-vessel retention, structural metrics, error composition, and available computational evidence.",
+    "advance": "FSG-Net achieved the highest equal-dataset mean Macro-F1 (0.77), IoU (0.63), clDice (0.83), and Skeleton F1 (0.78), whereas SA-UNetv2 achieved the highest mean sensitivity (0.85) and Thin-Vessel Sensitivity (0.63). Differences across datasets were often larger than those among the leading pipelines, and errors shared by all five methods were concentrated near annotated vessel boundaries and faint peripheral vessels."
+   },
+   "sec": 13.2,
+   "prompt_tokens": 478,
+   "completion_tokens": 229
+  },
+  {
+   "id": "2610.30609",
+   "summary": {
+    "problem": "Existing methods do not explicitly incorporate kinodynamic modeling or safety distances into trajectory generation, resulting in high absolute yaw rates, frequent collisions, and low navigation success rates.",
+    "method": "We introduce KinoUAV, a kinodynamic benchmark comprising a dataset and KinoUAV-Agent. The pipeline drives UAV through acceleration actions, using waypoint chains from global planning and generating trajectories segment by segment under velocity, acceleration, and jerk constraints, reducing oscillations and improving trajectory stability. Directional free-space distance (DFD) labels are introduced to describe the available clearance for safe motion decisions.",
+    "advance": "The benchmark incorporates the proposed Cruise-Seek task, improving navigation safety and reducing the difficulty of target search."
+   },
+   "sec": 9.9,
+   "prompt_tokens": 437,
+   "completion_tokens": 155
+  },
+  {
+   "id": "2610.30814",
+   "summary": {
+    "problem": "Training world models to improve policies, not predict pixels",
+    "method": "Downstream-Return Imagination Learning Loop (DRILL) that updates the world model to maximize the policy's return after an inner GRPO update on imagined rollouts",
+    "advance": "DRILL-VWI recovers the local one-step component of the DRILL-IMG meta-gradient under score-compatibility and small-residual assumptions, improving policy success rate by 13.1 points over WMPO and 7.9 points over RLVR-World"
+   },
+   "sec": 9.2,
+   "prompt_tokens": 466,
+   "completion_tokens": 122
+  },
+  {
+   "id": "2610.31304",
+   "summary": {
+    "problem": "Lack of systematic, data-centric survey for RS datasets tailored for VLMs",
+    "method": "Systematic review of RS datasets for VLMs and practical guide for fine-tuning and evaluation",
+    "advance": "Encourages building diverse and high-quality RS vision-language datasets for specialized sub-fields"
+   },
+   "sec": 7.2,
+   "prompt_tokens": 401,
+   "completion_tokens": 76
+  },
+  {
+   "id": "2610.31111",
+   "summary": {
+    "problem": "Long captions tend to produce unsupported specificity in the middle and escape into vague, non-evidential language.",
+    "method": "Position-aware diagnosis and reinforcement learning for detailed image captioning.",
+    "advance": "PAGER (Position-Aware Grounded Evidence Reinforcement) improves position-wise grounding and pairwise caption preference while preserving competitive global caption quality."
+   },
+   "sec": 7.2,
+   "prompt_tokens": 432,
+   "completion_tokens": 82
+  },
+  {
+   "id": "2610.31087",
+   "summary": {
+    "problem": "Multimodal sentiment analysis (MSA) aims to infer sentiment by integrating linguistic, acoustic, and visual information, but many fusion methods integrate modality-specific representations and cross-modal interactions into joint representations, making it difficult to determine whether predictive utility arises from a modality itself or from its interactions with others.",
+    "method": "I$^2$-KAN proposes an interpretable multi-pathway framework that explicitly maintains intra-modal and pairwise inter-modal information in separate structural pathways.",
+    "advance": "I$^2$-KAN retains explicit pathway associations and supports multi-level interpretation, demonstrating strong overall performance on CMU-MOSI, CMU-MOSEI, and CH-SIMS v2 benchmarks."
+   },
+   "sec": 9.9,
+   "prompt_tokens": 428,
+   "completion_tokens": 157
+  },
+  {
+   "id": "2610.30691",
+   "summary": {
+    "problem": "Improving accuracy of low-rank adaptation (LoRA) across different pretrained models",
+    "method": "Summing LoRA trained independently on different pretrained backbones to create LoRA superposition",
+    "advance": "Exact sum of LoRA across backbones achieves a mean accuracy gain of 30.21 percentage points over unadapted backbones"
+   },
+   "sec": 6.2,
+   "prompt_tokens": 355,
+   "completion_tokens": 86
+  },
+  {
+   "id": "2610.30519",
+   "summary": {
+    "problem": "Forecasting future human motion requires jointly reasoning about an agent's global trajectory and 3D body pose, particularly in team sports.",
+    "method": "Exploit a socio-temporal encoder that fuses trajectory and pose at the input level and models them jointly through shared factorized attention.",
+    "advance": "Improves over prior joint forecasting methods on both WorldPose and 3DPW, with the largest gains on pose accuracy."
+   },
+   "sec": 6.4,
+   "prompt_tokens": 326,
+   "completion_tokens": 100
+  },
+  {
+   "id": "2610.30639",
+   "summary": {
+    "problem": "The mismatch between patch-level and image-level representations in Self-supervised Vision Transformers.",
+    "method": "CODI (Cross Distillation) introduces a small amount of the teacher class-token distribution into each teacher patch-token target to provide masked patches with global semantics.",
+    "advance": "CODI improves dense and image-level performance under aligned pretraining settings."
+   },
+   "sec": 5.8,
+   "prompt_tokens": 326,
+   "completion_tokens": 83
+  }
+ ]
+}
