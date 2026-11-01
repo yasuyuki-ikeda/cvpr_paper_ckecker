@@ -594,7 +594,8 @@ HTML_TEMPLATE = r"""<!doctype html>
   }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg);
+body { margin: 0; background: var(--bg); color: var(--fg); height: 100vh;
+  display: flex; flex-direction: column;
   font: 13px/1.45 system-ui, "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif; }
 header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline;
   padding: 10px 16px; border-bottom: 1px solid var(--line); }
@@ -602,7 +603,19 @@ h1 { margin: 0; font-size: 16px; }
 #count { color: var(--muted); }
 button { font: inherit; padding: 2px 10px; border: 1px solid var(--line);
   border-radius: 4px; background: var(--bg); color: var(--fg); cursor: pointer; }
-.wrap { height: calc(100vh - 46px); overflow: auto; }
+.wrap { flex: 1; min-height: 0; overflow: auto; }
+/* Lower pane: the clicked paper's summary. The bar above it resizes it. */
+#splitter { flex: none; height: 6px; cursor: row-resize; background: var(--line); }
+#detail { flex: none; height: 35vh; overflow: auto; padding: 10px 16px 14px; }
+#splitter[hidden], #detail[hidden] { display: none; }
+#detail .bar { display: flex; gap: 12px; align-items: baseline; }
+#detail h2 { flex: 1; margin: 0; font-size: 15px; }
+#detail .ja { margin: 2px 0 8px; color: var(--muted); }
+#detail table { min-width: 0; width: 100%; max-width: 1100px; margin-bottom: 8px; }
+#detail th { width: 9em; text-align: left; border-left: 1px solid var(--line); }
+#detail td { border-top: 0; }
+#detail tr:first-child th, #detail tr:first-child td { border-top: 1px solid var(--line); }
+tr.selected td { background: var(--hover) !important; }
 table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
 thead { position: sticky; top: 0; z-index: 1; }
 th { background: var(--head); font-weight: 600; text-align: center; vertical-align: middle;
@@ -624,7 +637,7 @@ td.c { text-align: center; white-space: nowrap; }
 td.nw { white-space: nowrap; }
 a { color: var(--link); }
 .w-title { min-width: 360px; } .w-ja { min-width: 280px; } .w-co { min-width: 140px; }
-.w-io { min-width: 130px; } .w-sum { min-width: 260px; }
+.w-io { min-width: 130px; }
 .w-flag { min-width: 64px; max-width: 80px; }
 </style>
 </head>
@@ -640,16 +653,26 @@ a { color: var(--link); }
     <tbody id="rows"></tbody>
   </table>
 </div>
+<div id="splitter" hidden title="ドラッグで高さを変更"></div>
+<section id="detail" hidden>
+  <div class="bar">
+    <h2 id="d-title"></h2>
+    <a id="d-alpha" target="_blank" rel="noopener">alphaXiv で開く</a>
+    <button id="d-close" type="button" title="閉じる (Esc)">閉じる</button>
+  </div>
+  <p class="ja" id="d-ja"></p>
+  <table><tbody id="d-summary"></tbody></table>
+</section>
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const {headers, groups, rows} = JSON.parse(document.getElementById("data").textContent);
+const {headers, groups, summaryHeaders, rows} = JSON.parse(document.getElementById("data").textContent);
 // Column kinds: date, text (free-text filter), company (one dropdown entry per
 // company; a cell can list several, joined by "; "), code, flag (●). Each row
-// carries one extra, hidden element at the end: the alphaXiv URL for the title.
-const kinds = ["date", "text", "text", "company", "code", "text", "text", "text", "text", "text"]
-  .concat(Array(headers.length - 10).fill("flag"));
-const widths = {1: "w-title", 2: "w-ja", 3: "w-co", 5: "w-io", 6: "w-io",
-                7: "w-sum", 8: "w-sum", 9: "w-sum"};
+// carries one extra, hidden object at the end: the alphaXiv URL and the summary.
+const kinds = ["date", "text", "text", "company", "code", "text", "text"]
+  .concat(Array(headers.length - 7).fill("flag"));
+const widths = {1: "w-title", 2: "w-ja", 3: "w-co", 5: "w-io", 6: "w-io"};
+let selected = null;  // the row shown in the lower pane
 const ANY = "\u0000", SOME = "\u0001";  // "すべて" and "(企業あり)"
 const companiesOf = value => value ? value.split("; ") : [];
 const filters = [];
@@ -741,10 +764,21 @@ function render() {
   body.id = "rows";
   for (const row of shown) {
     const tr = body.insertRow();
+    if (row === selected) tr.className = "selected";
     headers.forEach((_, i) => {
       const td = tr.insertCell();
-      if (i === 1) td.appendChild(link(row[row.length - 1], row[i]));  // title opens alphaXiv
-      else td.textContent = row[i];
+      if (i === 1) {
+        // A plain click shows the summary below; Ctrl/middle click still opens alphaXiv.
+        const a = link(row[row.length - 1].alpha, row[i]);
+        a.addEventListener("click", event => {
+          if (event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+          event.preventDefault();
+          showDetail(row, tr);
+        });
+        td.appendChild(a);
+      } else {
+        td.textContent = row[i];
+      }
       if (kinds[i] === "code" || kinds[i] === "flag") td.className = "c";
       else if (kinds[i] === "date") td.className = "nw";
     });
@@ -757,6 +791,48 @@ function render() {
   document.getElementById("count").textContent = `${rows.length} 件中 ${shown.length} 件を表示`;
 }
 
+const detail = document.getElementById("detail");
+const splitter = document.getElementById("splitter");
+
+function showDetail(row, tr) {
+  selected = row;
+  document.querySelectorAll("tr.selected").forEach(r => r.classList.remove("selected"));
+  tr.classList.add("selected");
+  const extra = row[row.length - 1];
+  document.getElementById("d-title").textContent = row[1];
+  document.getElementById("d-ja").textContent = row[2];
+  document.getElementById("d-alpha").href = extra.alpha;
+  const body = document.getElementById("d-summary");
+  body.replaceChildren();
+  summaryHeaders.forEach((name, k) => {
+    const line = body.insertRow();
+    const th = document.createElement("th");
+    th.textContent = name;
+    line.appendChild(th);
+    line.insertCell().textContent = extra.summary[k] || "（要約なし）";
+  });
+  detail.hidden = splitter.hidden = false;
+}
+
+function hideDetail() {
+  selected = null;
+  document.querySelectorAll("tr.selected").forEach(r => r.classList.remove("selected"));
+  detail.hidden = splitter.hidden = true;
+}
+
+document.getElementById("d-close").addEventListener("click", hideDetail);
+document.addEventListener("keydown", event => { if (event.key === "Escape") hideDetail(); });
+splitter.addEventListener("pointerdown", event => {
+  event.preventDefault();
+  splitter.setPointerCapture(event.pointerId);
+  const move = e => {
+    const height = Math.min(Math.max(window.innerHeight - e.clientY, 80), window.innerHeight - 160);
+    detail.style.height = `${height}px`;
+  };
+  splitter.addEventListener("pointermove", move);
+  splitter.addEventListener("pointerup", () => splitter.removeEventListener("pointermove", move), {once: true});
+});
+
 document.getElementById("reset").addEventListener("click", () => {
   filters.forEach(control => { if (control) control.value = control.tagName === "SELECT" ? ANY : ""; });
   render();
@@ -768,17 +844,31 @@ render();
 """
 
 
+SUMMARY_COLUMNS = range(7, 10)  # 課題, 方法, 従来からの進化
+
+
 def write_html(rows, path, title):
-    """Single self-contained page: sticky header, per-column filters, sorting, links."""
+    """Single self-contained page: sticky header, per-column filters, sorting, and a
+    lower pane with the summary and the alphaXiv link of the clicked title.
+
+    The table leaves out the summary columns (they are long) and the ID/URL ones.
+    """
+    shown = [i for i in range(HTML_COLUMNS) if i not in SUMMARY_COLUMNS]
+    groups = []
+    for name, first, count in HEADER_GROUPS:
+        columns = [shown.index(i) for i in range(first, first + count) if i in shown]
+        if columns:
+            groups.append({"name": name, "first": columns[0], "count": len(columns)})
     data = json.dumps(
         {
-            "headers": HEADERS[:HTML_COLUMNS],
-            "groups": [
-                {"name": name, "first": first, "count": count}
-                for name, first, count in HEADER_GROUPS
-            ],
+            "headers": [HEADERS[i] for i in shown],
+            "groups": groups,
+            "summaryHeaders": [HEADERS[i] for i in SUMMARY_COLUMNS],
+            # Shown cells, then one hidden object for the lower pane.
             "rows": [
-                [row[0].isoformat(), *row[1:HTML_COLUMNS], row[-1]] for row in rows
+                [row[0].isoformat(), *(row[i] for i in shown[1:]),
+                 {"alpha": row[-1], "summary": [row[i] for i in SUMMARY_COLUMNS]}]
+                for row in rows
             ],
         },
         ensure_ascii=False,
