@@ -24,6 +24,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
@@ -544,7 +545,9 @@ def write_xlsx(rows, path):
     sheet.append([None] * len(HEADERS))  # row 1: group names, filled in below
     sheet.append(HEADERS)
     for row in rows:
-        sheet.append(row)
+        # Excel cells cannot hold most control characters.
+        sheet.append([ILLEGAL_CHARACTERS_RE.sub("", cell) if isinstance(cell, str) else cell
+                      for cell in row])
 
     header_fill = PatternFill("solid", fgColor="DDEBF7")
     for name, first, count in HEADER_GROUPS:
@@ -934,6 +937,14 @@ SUMMARY_FIELDS = ("problem", "method", "advance")  # as written by summarize.py
 SUMMARY_NOT_STATED = "Not stated"
 
 
+def restore_latex(text):
+    """Undo JSON escapes the model wrote for LaTeX: "\\boldsymbol" in its JSON
+    decodes to a backspace + "oldsymbol", "\\text" to a tab + "ext"."""
+    escapes = {"\b": "\\b", "\f": "\\f", "\t": "\\t", "\n": "\\n", "\r": "\\r"}
+    text = re.sub(r"[\b\f\t\n\r](?=[A-Za-z])", lambda m: escapes[m.group(0)], text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def summary_cells(summary, ja):
     """課題・方法・従来からの進化 in Japanese (English if untranslated); blank without a summary."""
     if not summary:
@@ -1002,6 +1013,8 @@ def main():
     summaries = {}
     for path in args.summaries:
         summaries.update(json.load(path.open(encoding="utf-8")))
+    summaries = {paper_id: {field: restore_latex(text) for field, text in summary.items()}
+                 for paper_id, summary in summaries.items()}
     if summaries:
         print(f"Loaded summaries for {sum(p['id'] in summaries for p in papers)}/{len(papers)} papers.")
     summary_texts = {text for summary in summaries.values() for text in summary.values()
