@@ -326,6 +326,52 @@ def author_block(page):
     return strip_tags(match.group(1)) if match else ""
 
 
+FIGURE_TAG = re.compile(r"<(/?)figure\b([^>]*)>", re.IGNORECASE)
+# Raster images are <img src>, SVG ones <object data>.
+GRAPHIC = re.compile(r'<(?:img\b[^>]*\bsrc|object\b[^>]*\bdata)="([^"]+)"[^>]*class="[^"]*ltx_graphics',
+                     re.IGNORECASE)
+CAPTION = re.compile(r"<figcaption[^>]*>(.*?)</figcaption>", re.IGNORECASE | re.DOTALL)
+CAPTION_LIMIT = 400
+
+
+def figure_one(page, paper_id):
+    """Figure 1 of the arXiv HTML page: {"images": [URLs], "caption": text}, or None.
+
+    Takes the figure captioned "Figure 1" (else the first figure) with all its
+    panels. A teaser drawn just above it without a caption of its own counts too.
+    """
+    figures, depth, start, previous_end = [], 0, 0, 0
+    for tag in FIGURE_TAG.finditer(page):
+        if not tag[1]:
+            if depth == 0:
+                start, attributes = tag.start(), tag[2]
+            depth += 1
+        elif depth:
+            depth -= 1
+            if depth == 0:
+                if "ltx_figure" in attributes:
+                    figures.append((previous_end, start, page[start:tag.end()]))
+                previous_end = tag.end()
+    if not figures:
+        return None
+
+    def caption_of(block):  # the outer caption comes last, after the panels' own
+        captions = CAPTION.findall(block)
+        return strip_tags(captions[-1]) if captions else ""
+
+    before, start, block = next(
+        (f for f in figures if re.match(r"(?:Figure|Fig\.)\s*1\b(?!\.\d)", caption_of(f[2]))), figures[0])
+    images = GRAPHIC.findall(block) or GRAPHIC.findall(page[before:start])[-1:]
+    if not images:
+        return None  # e.g. a figure drawn in the page itself (inline SVG)
+    caption = caption_of(block)
+    if len(caption) > CAPTION_LIMIT:
+        caption = caption[:CAPTION_LIMIT].rstrip() + "…"
+    base = f"https://arxiv.org/html/{paper_id}"
+    return {"images": [urllib.parse.urljoin(base, html.unescape(src)) for src in images],
+            "caption": caption}
+
+
 def companies_from_html(page):
     text = author_block(page)
     found = [
@@ -618,6 +664,11 @@ button { font: inherit; padding: 2px 10px; border: 1px solid var(--line);
 #detail th { width: 9em; text-align: left; border-left: 1px solid var(--line); }
 #detail td { border-top: 0; }
 #detail tr:first-child th, #detail tr:first-child td { border-top: 1px solid var(--line); }
+#d-figure { margin: 4px 0 0; max-width: 1100px; }
+#d-figure .images { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+/* White behind the figure: many have transparent backgrounds drawn for white paper. */
+#d-figure img { max-width: 100%; max-height: 60vh; background: #fff; }
+#d-caption { margin-top: 4px; color: var(--muted); }
 tr.selected td { background: var(--hover) !important; }
 table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
 thead { position: sticky; top: 0; z-index: 1; }
@@ -665,6 +716,7 @@ a { color: var(--link); }
   </div>
   <p class="ja" id="d-ja"></p>
   <table><tbody id="d-summary"></tbody></table>
+  <figure id="d-figure"><div class="images" id="d-images"></div><figcaption id="d-caption"></figcaption></figure>
 </section>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -814,6 +866,20 @@ function showDetail(row, tr) {
     line.appendChild(th);
     line.insertCell().textContent = extra.summary[k] || "（要約なし）";
   });
+  const images = document.getElementById("d-images");
+  const caption = document.getElementById("d-caption");
+  images.replaceChildren();
+  caption.textContent = extra.figure ? extra.figure.caption : "（図なし：arXiv に HTML 版が無いか、図が見つかりません）";
+  (extra.figure ? extra.figure.images : []).forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Figure 1";
+    img.addEventListener("error", () => {
+      img.remove();
+      if (!images.children.length) caption.textContent = "（図を読み込めません）" + caption.textContent;
+    });
+    images.appendChild(img);
+  });
   detail.hidden = splitter.hidden = false;
 }
 
@@ -850,9 +916,11 @@ render();
 SUMMARY_COLUMNS = range(7, 10)  # 課題, 方法, 従来からの進化
 
 
-def write_html(rows, path, title):
+def write_html(rows, path, title, figures=None):
     """Single self-contained page: sticky header, per-column filters, sorting, and a
-    lower pane with the summary and the alphaXiv link of the clicked title.
+    lower pane with the summary, Figure 1 and the alphaXiv link of the clicked title.
+    Figure 1 is loaded from arXiv when the pane opens; `figures` maps arXiv ID to
+    figure_one()'s result.
 
     The table leaves out the summary columns (they are long) and the ID/URL ones.
     """
@@ -870,7 +938,8 @@ def write_html(rows, path, title):
             # Shown cells, then one hidden object for the lower pane.
             "rows": [
                 [row[0].isoformat(), *(row[i] for i in shown[1:]),
-                 {"alpha": row[-1], "summary": [row[i] for i in SUMMARY_COLUMNS]}]
+                 {"alpha": row[-1], "summary": [row[i] for i in SUMMARY_COLUMNS],
+                  "figure": (figures or {}).get(row[-3])}]
                 for row in rows
             ],
         },
@@ -1062,7 +1131,9 @@ def main():
     write_xlsx(rows, xlsx_output)
     print(f"Wrote {len(rows)} papers to {xlsx_output.resolve()}")
     html_output = output.with_suffix(".html")
-    write_html(rows, html_output, f"arXiv cs.CV {start} – {end}")
+    figures = {paper["id"]: figure_one(html_pages[paper["id"]], paper["id"]) for paper in papers}
+    print(f"Found Figure 1 for {sum(f is not None for f in figures.values())}/{len(papers)} papers.")
+    write_html(rows, html_output, f"arXiv cs.CV {start} – {end}", figures)
     print(f"Wrote {len(rows)} papers to {html_output.resolve()}")
     if RESULT_DIR.is_dir():
         write_index(RESULT_DIR)
