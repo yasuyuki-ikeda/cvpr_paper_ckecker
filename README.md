@@ -33,7 +33,7 @@ python collect_arxiv_cv.py --start 2026-10-14 --end 2026-10-16
 ### 処理の流れ
 
 1. **論文一覧の取得**: まず arXiv の検索 API（`export.arxiv.org/api`、`cat:cs.CV` と投稿日時で検索、500 件ずつ）で取得する。API が失敗したとき（429 など）は arXiv OAI-PMH（`oaipmh.arxiv.org`、arXivRaw 形式、cs 分野）に切り替え、1 日分ずつ取得する（何日分もまとめて頼むとサーバーの応答が 3 分を超え、503 になるため）。どちらも 3 秒に 1 回。初版（v1）の投稿日時が期間内（日本時間）の論文を残す。クロスリストも含む。新しい順に並べる。
-2. **和訳**: タイトルを外部の翻訳 API（`translate.projectsegfau.lt`）で日本語に訳す。4 本並列、失敗時は 5 回までやり直し、だめなら空欄。
+2. **和訳**: タイトルを外部の翻訳 API（`translate.projectsegfau.lt`）で日本語に訳す。4 本並列。翻訳エンジンは 1 つずつ（Yandex → DuckDuckGo → Google の順）試し、訳文が翻訳らしくないとき（DeepL の「アプリを更新してください」という通知文のような、原文よりずっと長い文や、日本語を含まない文）は次のエンジンへ進む。全エンジンを 3 回までやり直し、だめなら空欄。要約の和訳も同じ関数を使う。
 3. **所属企業**: `arxiv.org/html/<ID>` を 1 本ずつ取得し、著者欄の所属から企業名（42 社）を正規表現で探す。Meta・Apple など一般語と紛らわしい 9 社は大文字小文字を区別し、社名らしい形のときだけ一致。HTML 版が無い論文は空欄。
 4. **コード公開**: アブストラクトのみで判定。
    - あり: GitHub / GitLab / Bitbucket / Codeberg / Hugging Face / github.io の URL、または「code is available」「project page」など

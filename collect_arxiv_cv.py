@@ -277,21 +277,39 @@ def harvest_page(params, start, end, papers, seen):
     return {"verb": "ListRecords", "resumptionToken": token} if token else None
 
 
+TRANSLATE_ENGINES = ("yandex", "duckduckgo", "google")  # tried in this order
+JAPANESE = re.compile(r"[぀-ヿ一-鿿]")
+
+
+def plausible_translation(source, translated):
+    """False for an engine's error text (e.g. DeepL's "update the app" notice in 10 languages)."""
+    if not translated or re.search(r"deepl|older version|update", translated, re.IGNORECASE):
+        return False
+    if len(translated) > 3 * len(source) + 40:
+        return False
+    return len(source) < 20 or bool(JAPANESE.search(translated))
+
+
 def translate(title):
-    """Translate with the publicly available Project Segfault API."""
-    for attempt in range(5):
-        try:
-            data = json.loads(fetch(
-                "https://translate.projectsegfau.lt/api/translate",
-                {"engine": "all", "from": "en", "to": "ja", "text": title},
-                timeout=60,
-            ).decode("utf-8"))
-            for result in data:
-                translated = clean(result.get("translated-text"))
-                if translated:
-                    return translated
-        except (OSError, ValueError, json.JSONDecodeError):
-            pass
+    """Translate with the publicly available Project Segfault API.
+
+    One engine at a time: with engine=all the first non-empty answer wins, which
+    can be an engine's error message instead of a translation.
+    """
+    for attempt in range(3):
+        for engine in TRANSLATE_ENGINES:
+            try:
+                data = json.loads(fetch(
+                    "https://translate.projectsegfau.lt/api/translate",
+                    {"engine": engine, "from": "en", "to": "ja", "text": title},
+                    timeout=60,
+                ).decode("utf-8"))
+                for result in data if isinstance(data, list) else [data]:
+                    translated = clean(result.get("translated-text"))
+                    if plausible_translation(title, translated):
+                        return translated
+            except (OSError, ValueError, json.JSONDecodeError, AttributeError):
+                pass
         time.sleep(2 * (attempt + 1))
     return ""  # Keep the row and visibly report an unavailable translation.
 
